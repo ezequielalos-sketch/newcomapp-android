@@ -1,20 +1,17 @@
 package com.pilar.newcomapp.data.local.entity
 
-import androidx.room.*
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-@Entity(
-    tableName = "rotaciones_actuales",
-    foreignKeys = [
-        ForeignKey(entity = SetEntity::class, parentColumns = ["setId"], childColumns = ["setOwnerId"], onDelete = ForeignKey.CASCADE),
-        ForeignKey(entity = JugadorEntity::class, parentColumns = ["jugadorId"], childColumns = ["jugadorId"], onDelete = ForeignKey.RESTRICT)
-    ],
-    indices = [Index("setOwnerId"), Index("jugadorId"), Index(value = ["setOwnerId", "lado", "posicion"], unique = true)]
-)
+@Entity(tableName = "rotacion_actual")
 data class RotacionActualEntity(
-    @PrimaryKey(autoGenerate = true) val rotacionId: Long = 0L,
-    val setOwnerId: Long,
-    val lado: String,
-    val posicion: Int,
-    val jugadorId: Long,
-    val ordenActual: Int
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val partidoId: Long,
+    val posicion1: String = "",
+    val posicion2: String = "",
+    val posicion3: String = "",
+    val posicion4: String = "",
+    val posicion5: String = "",
+    val posicion6: String = ""
 )
