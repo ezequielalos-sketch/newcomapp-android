@@ -4,7 +4,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,16 +52,12 @@ fun RotacionScreen(
                     rot.posicion4, rot.posicion5, rot.posicion6
                 )
 
-                // Cancha - disposicion 2x3 (voley)
-                // Fila delantera: pos 4, 3, 2
-                // Fila trasera:   pos 5, 6, 1
                 Text("-- Red --", fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Posiciones delanteras (4, 3, 2)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -72,7 +70,6 @@ fun RotacionScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Posiciones traseras (5, 6, 1)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -85,7 +82,6 @@ fun RotacionScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Botones de rotacion
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -94,17 +90,13 @@ fun RotacionScreen(
                         onClick = { viewModel.rotarAnterior() },
                         modifier = Modifier.weight(1f).padding(end = 8.dp)
                     ) {
-                        Icon(Icons.Default.RotateLeft, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Rotar -1")
+                        Text("<< Rotar -1")
                     }
                     Button(
                         onClick = { viewModel.rotarSiguiente() },
                         modifier = Modifier.weight(1f).padding(start = 8.dp)
                     ) {
-                        Text("Rotar +1")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(Icons.Default.RotateRight, contentDescription = null)
+                        Text("Rotar +1 >>")
                     }
                 }
             } ?: run {
