@@ -22,6 +22,7 @@ import com.pilar.newcomapp.ui.viewmodel.PartidoViewModel
 @Composable
 fun RotacionScreen(
     onAtras: () -> Unit,
+    onConfigurarJugadores: () -> Unit,
     viewModel: PartidoViewModel = hiltViewModel()
 ) {
     val rotacion by viewModel.rotacionActual.collectAsState()
@@ -34,6 +35,11 @@ fun RotacionScreen(
                 navigationIcon = {
                     IconButton(onClick = onAtras) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atras")
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onConfigurarJugadores) {
+                        Text("Jugadores")
                     }
                 }
             )
@@ -52,10 +58,8 @@ fun RotacionScreen(
                     rot.posicion4, rot.posicion5, rot.posicion6
                 )
 
-                Text("-- Red --", fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center)
+                Text("-- Red --", fontSize = 14.sp, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
@@ -63,8 +67,10 @@ fun RotacionScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     listOf(4 to jugadores[3], 3 to jugadores[2], 2 to jugadores[1]).forEach { (pos, nombre) ->
-                        PosicionCard(posicion = pos, nombre = nombre,
-                            onNombreChange = { viewModel.actualizarJugadorEnPosicion(pos, it) })
+                        PosicionCard(
+                            posicion = pos, nombre = nombre,
+                            onNombreChange = { viewModel.actualizarJugadorEnPosicion(pos, it) }
+                        )
                     }
                 }
 
@@ -75,8 +81,10 @@ fun RotacionScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     listOf(5 to jugadores[4], 6 to jugadores[5], 1 to jugadores[0]).forEach { (pos, nombre) ->
-                        PosicionCard(posicion = pos, nombre = nombre,
-                            onNombreChange = { viewModel.actualizarJugadorEnPosicion(pos, it) })
+                        PosicionCard(
+                            posicion = pos, nombre = nombre,
+                            onNombreChange = { viewModel.actualizarJugadorEnPosicion(pos, it) }
+                        )
                     }
                 }
 
@@ -99,8 +107,25 @@ fun RotacionScreen(
                         Text("Rotar +1 >>")
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = onConfigurarJugadores,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Configurar nombres de jugadores")
+                }
+
             } ?: run {
-                Text("No hay rotacion disponible")
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    "Cargando rotacion...",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator()
             }
         }
     }
