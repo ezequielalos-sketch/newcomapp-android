@@ -2,7 +2,9 @@ package com.pilar.newcomapp.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,7 +35,7 @@ fun PartidoScreen(
                 },
                 actions = {
                     IconButton(onClick = onVerRotacion) {
-                        Icon(Icons.Default.GridOn, contentDescription = "Rotacion")
+                        Icon(Icons.Default.List, contentDescription = "Rotacion")
                     }
                 }
             )
@@ -47,7 +49,6 @@ fun PartidoScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             partido?.let { p ->
-                // Sets
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -60,13 +61,11 @@ fun PartidoScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Marcador
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Equipo Local
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(p.nombreEquipoLocal, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -78,18 +77,22 @@ fun PartidoScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row {
-                            IconButton(onClick = { viewModel.restarPuntoLocal() }) {
-                                Icon(Icons.Default.Remove, contentDescription = "-1")
-                            }
-                            IconButton(onClick = { viewModel.sumarPuntoLocal() }) {
-                                Icon(Icons.Default.Add, contentDescription = "+1")
-                            }
+                            OutlinedButton(
+                                onClick = { viewModel.restarPuntoLocal() },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("-", fontSize = 20.sp) }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { viewModel.sumarPuntoLocal() },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("+", fontSize = 20.sp) }
                         }
                     }
 
                     Text(":", fontSize = 48.sp, fontWeight = FontWeight.Bold)
 
-                    // Equipo Visitante
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(p.nombreEquipoVisitante, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -101,12 +104,17 @@ fun PartidoScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row {
-                            IconButton(onClick = { viewModel.restarPuntoVisitante() }) {
-                                Icon(Icons.Default.Remove, contentDescription = "-1")
-                            }
-                            IconButton(onClick = { viewModel.sumarPuntoVisitante() }) {
-                                Icon(Icons.Default.Add, contentDescription = "+1")
-                            }
+                            OutlinedButton(
+                                onClick = { viewModel.restarPuntoVisitante() },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("-", fontSize = 20.sp) }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = { viewModel.sumarPuntoVisitante() },
+                                modifier = Modifier.size(48.dp),
+                                contentPadding = PaddingValues(0.dp)
+                            ) { Text("+", fontSize = 20.sp) }
                         }
                     }
                 }
