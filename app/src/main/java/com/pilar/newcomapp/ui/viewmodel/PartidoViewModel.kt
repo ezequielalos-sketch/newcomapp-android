@@ -26,29 +26,81 @@ class PartidoViewModel @Inject constructor(
     private val _rotacionActual = MutableStateFlow<RotacionActualEntity?>(null)
     val rotacionActual: StateFlow<RotacionActualEntity?> = _rotacionActual
 
+    private val _advertenciaMixto = MutableStateFlow("")
+    val advertenciaMixto: StateFlow<String> = _advertenciaMixto
+
     init {
         viewModelScope.launch {
             partidoActivo.filterNotNull().collect { partido ->
                 repository.obtenerRotacion(partido.id).collect { rotacion ->
                     _rotacionActual.value = rotacion
+                    verificarReglaMixto(partido, rotacion)
                 }
             }
         }
     }
 
-    fun crearNuevoPartido(nombreLocal: String = "Nosotros", nombreVisitante: String = "Rival") {
+    private fun verificarReglaMixto(partido: PartidoEntity, rotacion: RotacionActualEntity?) {
+        if (partido.modalidad != "Mixto" || rotacion == null) {
+            _advertenciaMixto.value = ""
+            return
+        }
+        val sexos = listOf(
+            rotacion.sexo1, rotacion.sexo2, rotacion.sexo3,
+            rotacion.sexo4, rotacion.sexo5, rotacion.sexo6
+        )
+        val mujeres = sexos.count { it == "F" }
+        _advertenciaMixto.value = if (mujeres < partido.minimoMujeresMixto) {
+            "Atencion: solo $mujeres mujer(es) en cancha. Minimo: ${partido.minimoMujeresMixto}"
+        } else ""
+    }
+
+    fun crearNuevoPartido(
+        nombreLocal: String = "Nosotros",
+        nombreVisitante: String = "Rival",
+        modalidad: String = "Masculino",
+        categoria: String = "+40",
+        cantidadSets: Int = 3,
+        puntajePorSet: Int = 25
+    ) {
         viewModelScope.launch {
             val partido = PartidoEntity(
                 nombreEquipoLocal = nombreLocal,
-                nombreEquipoVisitante = nombreVisitante
+                nombreEquipoVisitante = nombreVisitante,
+                modalidad = modalidad,
+                categoria = categoria,
+                cantidadSets = cantidadSets,
+                puntajePorSet = puntajePorSet
             )
             val id = repository.crearPartido(partido)
+            val sexoDefault = if (modalidad == "Femenino") "F" else "M"
             val rotacion = RotacionActualEntity(
                 partidoId = id,
                 posicion1 = "", posicion2 = "", posicion3 = "",
-                posicion4 = "", posicion5 = "", posicion6 = ""
+                posicion4 = "", posicion5 = "", posicion6 = "",
+                sexo1 = sexoDefault, sexo2 = sexoDefault, sexo3 = sexoDefault,
+                sexo4 = sexoDefault, sexo5 = sexoDefault, sexo6 = sexoDefault
             )
             repository.guardarRotacion(rotacion)
+        }
+    }
+
+    fun actualizarConfiguracionPartido(
+        modalidad: String,
+        categoria: String,
+        cantidadSets: Int,
+        puntajePorSet: Int
+    ) {
+        val partido = partidoActivo.value ?: return
+        viewModelScope.launch {
+            repository.actualizarPartido(
+                partido.copy(
+                    modalidad = modalidad,
+                    categoria = categoria,
+                    cantidadSets = cantidadSets,
+                    puntajePorSet = puntajePorSet
+                )
+            )
         }
     }
 
@@ -88,9 +140,21 @@ class PartidoViewModel @Inject constructor(
             rotacion.posicion1, rotacion.posicion2, rotacion.posicion3,
             rotacion.posicion4, rotacion.posicion5, rotacion.posicion6
         )
+        val s = listOf(
+            rotacion.sexo1, rotacion.sexo2, rotacion.sexo3,
+            rotacion.sexo4, rotacion.sexo5, rotacion.sexo6
+        )
+        val l = listOf(
+            rotacion.libero1, rotacion.libero2, rotacion.libero3,
+            rotacion.libero4, rotacion.libero5, rotacion.libero6
+        )
         val nueva = rotacion.copy(
             posicion1 = j[1], posicion2 = j[2], posicion3 = j[3],
-            posicion4 = j[4], posicion5 = j[5], posicion6 = j[0]
+            posicion4 = j[4], posicion5 = j[5], posicion6 = j[0],
+            sexo1 = s[1], sexo2 = s[2], sexo3 = s[3],
+            sexo4 = s[4], sexo5 = s[5], sexo6 = s[0],
+            libero1 = l[1], libero2 = l[2], libero3 = l[3],
+            libero4 = l[4], libero5 = l[5], libero6 = l[0]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -104,9 +168,21 @@ class PartidoViewModel @Inject constructor(
             rotacion.posicion1, rotacion.posicion2, rotacion.posicion3,
             rotacion.posicion4, rotacion.posicion5, rotacion.posicion6
         )
+        val s = listOf(
+            rotacion.sexo1, rotacion.sexo2, rotacion.sexo3,
+            rotacion.sexo4, rotacion.sexo5, rotacion.sexo6
+        )
+        val l = listOf(
+            rotacion.libero1, rotacion.libero2, rotacion.libero3,
+            rotacion.libero4, rotacion.libero5, rotacion.libero6
+        )
         val nueva = rotacion.copy(
             posicion1 = j[5], posicion2 = j[0], posicion3 = j[1],
-            posicion4 = j[2], posicion5 = j[3], posicion6 = j[4]
+            posicion4 = j[2], posicion5 = j[3], posicion6 = j[4],
+            sexo1 = s[5], sexo2 = s[0], sexo3 = s[1],
+            sexo4 = s[2], sexo5 = s[3], sexo6 = s[4],
+            libero1 = l[5], libero2 = l[0], libero3 = l[1],
+            libero4 = l[2], libero5 = l[3], libero6 = l[4]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -114,24 +190,11 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
-    fun actualizarJugadorEnPosicion(posicion: Int, nombre: String) {
-        val rotacion = _rotacionActual.value ?: return
-        val nueva = when (posicion) {
-            1 -> rotacion.copy(posicion1 = nombre)
-            2 -> rotacion.copy(posicion2 = nombre)
-            3 -> rotacion.copy(posicion3 = nombre)
-            4 -> rotacion.copy(posicion4 = nombre)
-            5 -> rotacion.copy(posicion5 = nombre)
-            6 -> rotacion.copy(posicion6 = nombre)
-            else -> rotacion
-        }
-        viewModelScope.launch {
-            repository.actualizarRotacion(nueva)
-            _rotacionActual.value = nueva
-        }
-    }
-
-    fun guardarNombresJugadores(nombres: List<String>) {
+    fun guardarNombresJugadores(
+        nombres: List<String>,
+        sexos: List<String>,
+        liberos: List<Boolean>
+    ) {
         val rotacion = _rotacionActual.value ?: return
         val nueva = rotacion.copy(
             posicion1 = nombres.getOrElse(0) { rotacion.posicion1 },
@@ -139,7 +202,19 @@ class PartidoViewModel @Inject constructor(
             posicion3 = nombres.getOrElse(2) { rotacion.posicion3 },
             posicion4 = nombres.getOrElse(3) { rotacion.posicion4 },
             posicion5 = nombres.getOrElse(4) { rotacion.posicion5 },
-            posicion6 = nombres.getOrElse(5) { rotacion.posicion6 }
+            posicion6 = nombres.getOrElse(5) { rotacion.posicion6 },
+            sexo1 = sexos.getOrElse(0) { rotacion.sexo1 },
+            sexo2 = sexos.getOrElse(1) { rotacion.sexo2 },
+            sexo3 = sexos.getOrElse(2) { rotacion.sexo3 },
+            sexo4 = sexos.getOrElse(3) { rotacion.sexo4 },
+            sexo5 = sexos.getOrElse(4) { rotacion.sexo5 },
+            sexo6 = sexos.getOrElse(5) { rotacion.sexo6 },
+            libero1 = liberos.getOrElse(0) { rotacion.libero1 },
+            libero2 = liberos.getOrElse(1) { rotacion.libero2 },
+            libero3 = liberos.getOrElse(2) { rotacion.libero3 },
+            libero4 = liberos.getOrElse(3) { rotacion.libero4 },
+            libero5 = liberos.getOrElse(4) { rotacion.libero5 },
+            libero6 = liberos.getOrElse(5) { rotacion.libero6 }
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
