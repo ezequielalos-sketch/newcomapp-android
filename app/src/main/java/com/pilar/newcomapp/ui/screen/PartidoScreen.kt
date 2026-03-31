@@ -3,7 +3,6 @@ package com.pilar.newcomapp.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -53,9 +52,13 @@ fun PartidoScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text("Sets: ${p.setsLocal} - ${p.setsVisitante}",
-                        fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Sets: ${p.setsLocal} - ${p.setsVisitante}",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Set ${p.setActual}", fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -124,18 +127,15 @@ fun PartidoScreen(
                 Button(
                     onClick = { viewModel.finalizarSet() },
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Finalizar Set")
-                }
+                ) { Text("Finalizar Set") }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
                     onClick = onVerRotacion,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Ver / Rotar")
-                }
+                ) { Text("Ver / Rotar") }
+
             } ?: run {
                 Text("No hay partido activo")
             }
