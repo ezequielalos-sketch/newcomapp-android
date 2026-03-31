@@ -23,7 +23,9 @@ object DatabaseModule {
             context,
             NewcomDatabase::class.java,
             "newcom_database"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
