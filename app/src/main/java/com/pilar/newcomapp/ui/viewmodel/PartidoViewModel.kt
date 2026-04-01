@@ -87,6 +87,35 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Actualiza la configuracion del partido activo (modalidad, categoria, sets, puntaje).
+     * Llamada desde ConfigurarJugadoresScreen al guardar.
+     */
+    fun actualizarConfiguracionPartido(
+        modalidad: String,
+        categoria: String,
+        cantidadSets: Int,
+        puntajePorSet: Int
+    ) {
+        val p = partidoActivo.value ?: return
+        viewModelScope.launch {
+            val puntajeSetFinal = when {
+                puntajePorSet == 15 -> 10  // Newcom: sets 1-2 a 15, set 3 a 10
+                puntajePorSet == 25 -> 15  // Volleyball: sets 1-4 a 25, set 5 a 15
+                else -> puntajePorSet      // Fallback
+            }
+            repository.actualizarPartido(
+                p.copy(
+                    modalidad = modalidad,
+                    categoria = categoria,
+                    cantidadSets = cantidadSets,
+                    puntajePorSet = puntajePorSet,
+                    puntajeSetFinal = puntajeSetFinal
+                )
+            )
+        }
+    }
+
     fun sumarPuntoLocal() {
         val p = partidoActivo.value ?: return
         viewModelScope.launch {
