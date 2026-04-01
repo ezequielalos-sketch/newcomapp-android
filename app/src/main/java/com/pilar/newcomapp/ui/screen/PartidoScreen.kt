@@ -115,7 +115,7 @@ fun PartidoScreen(
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Start
                 )
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 
                 SetResultRow("Set 1", p.set1Local, p.set1Visitante)
                 SetResultRow("Set 2", p.set2Local, p.set2Visitante)
