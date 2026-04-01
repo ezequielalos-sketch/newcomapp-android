@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -20,10 +21,12 @@ import com.pilar.newcomapp.ui.viewmodel.PartidoViewModel
 
 val ColorMasculino = Color(0xFF1565C0)
 val ColorFemenino = Color(0xFFC62828)
-val ColorLibero = Color(0xFF2E7D32)
+val ColorLiberoM = Color(0xFF1565C0)       // Azul para borde libero M
+val ColorLiberoF = Color(0xFFC62828)       // Rojo para borde libero F
+val ColorLiberoFondo = Color(0xFFE8F5E9)   // Verde claro fondo ambos liberos
+val ColorLiberoTexto = Color(0xFF2E7D32)   // Verde oscuro texto LIB
 val ColorFondoMasculino = Color(0xFFE3F2FD)
 val ColorFondoFemenino = Color(0xFFFFEBEE)
-val ColorFondoLibero = Color(0xFFE8F5E9)
 
 val NOMBRES_POSICIONES = listOf(
     "P1: Servidor",
@@ -250,7 +253,7 @@ fun RotacionScreen(
                     ) {
                         Text("Nombres", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
-                    // Boton Libero M
+                    // Boton Libero M (azul con texto verde)
                     Button(
                         onClick = { viewModel.ingresarLibero("M") },
                         modifier = Modifier.weight(1f).height(44.dp),
@@ -261,7 +264,7 @@ fun RotacionScreen(
                     ) {
                         Text("Libero M", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color(0xFF81C784))
                     }
-                    // Boton Libero F
+                    // Boton Libero F (rojo con texto verde)
                     Button(
                         onClick = { viewModel.ingresarLibero("F") },
                         modifier = Modifier.weight(1f).height(44.dp),
@@ -291,28 +294,35 @@ fun JugadorCard(
     esLibero: Boolean,
     modifier: Modifier = Modifier
 ) {
+    // Colores segun tipo: Libero M (verde/azul), Libero F (verde/rojo), regular
     val colorFondo = when {
-        esLibero -> ColorFondoLibero
+        esLibero -> ColorLiberoFondo
         sexo == "F" -> ColorFondoFemenino
         else -> ColorFondoMasculino
     }
     val colorBorde = when {
-        esLibero -> ColorLibero
+        esLibero && sexo == "F" -> ColorLiberoF   // Libero F: borde rojo
+        esLibero -> ColorLiberoM                    // Libero M: borde azul
         sexo == "F" -> ColorFemenino
         else -> ColorMasculino
     }
-    val colorTexto = when {
-        esLibero -> ColorLibero
+    val colorNumero = when {
+        esLibero -> ColorLiberoTexto  // Verde para el numero del libero
         sexo == "F" -> ColorFemenino
         else -> ColorMasculino
     }
     val etiqueta = when {
-        esLibero -> "LIB"
+        esLibero && sexo == "F" -> "LIB F"
+        esLibero -> "LIB M"
         sexo == "F" -> "F"
         else -> "M"
     }
+    val colorEtiqueta = when {
+        esLibero -> ColorLiberoTexto   // Verde para la etiqueta
+        sexo == "F" -> ColorFemenino
+        else -> ColorMasculino
+    }
 
-    // Nombre corto de la posicion (solo la parte despues de ": ")
     val nombreCorto = nombrePosicion.substringAfter(": ", "")
 
     Card(
@@ -337,23 +347,28 @@ fun JugadorCard(
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
+            // Numero de posicion
             Text(
                 text = "$posicion",
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = colorTexto
+                color = colorNumero
             )
+            // Nombre del jugador - MAS GRANDE
             Text(
                 text = if (nombre.isBlank()) "---" else nombre,
-                fontSize = 12.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 16.sp
             )
             Spacer(modifier = Modifier.height(2.dp))
+            // Etiqueta de sexo/libero
             Surface(
-                color = colorBorde,
+                color = colorEtiqueta,
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(

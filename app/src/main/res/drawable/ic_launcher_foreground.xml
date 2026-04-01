@@ -5,90 +5,104 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Fondo circular de la pelota - blanco -->
+    <!-- Sombra sutil debajo de la pelota -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,18 A36,36 0 1,1 53.99,18 Z" />
+        android:fillColor="#22000000"
+        android:pathData="M54,90 A30,6 0 1,0 54.01,90 Z" />
 
-    <!-- Costuras curvas de pelota de voley - 3 lineas curvas que se cruzan -->
-    <!-- Costura 1: curva horizontal central -->
+    <!-- Fondo circular de la pelota - blanco base -->
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#333333"
-        android:strokeWidth="2.2"
-        android:pathData="M18,54 Q36,38 54,42 Q72,46 90,54" />
+        android:fillColor="#F5F5F5"
+        android:pathData="M54,18 A34,34 0 1,1 53.99,18 Z" />
 
-    <!-- Costura 2: curva diagonal superior izq a inferior der -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#333333"
-        android:strokeWidth="2.2"
-        android:pathData="M32,20 Q40,44 54,54 Q68,64 76,88" />
-
-    <!-- Costura 3: curva diagonal superior der a inferior izq -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#333333"
-        android:strokeWidth="2.2"
-        android:pathData="M76,20 Q68,44 54,54 Q40,64 32,88" />
-
-    <!-- Panel 1 - Azul (arriba centro) -->
+    <!-- Panel Azul - arriba izquierda -->
     <path
         android:fillColor="#1565C0"
-        android:fillAlpha="0.85"
-        android:pathData="M54,18 Q64,18 74,22 Q68,38 54,42 Q40,38 34,22 Q44,18 54,18 Z" />
+        android:pathData="M38,20 Q28,28 22,40 Q32,42 42,38 Q46,30 44,20 Z" />
 
-    <!-- Panel 2 - Rojo (derecha) -->
+    <!-- Panel Azul - abajo derecha -->
     <path
-        android:fillColor="#C62828"
-        android:fillAlpha="0.85"
-        android:pathData="M74,22 Q86,30 90,44 Q78,48 72,46 Q68,38 74,22 Z" />
+        android:fillColor="#1565C0"
+        android:pathData="M70,66 Q80,58 86,46 Q76,44 66,48 Q62,56 64,66 Z" />
 
-    <!-- Panel 3 - Amarillo (abajo derecha) -->
+    <!-- Panel Amarillo/dorado - arriba derecha -->
     <path
-        android:fillColor="#F9A825"
-        android:fillAlpha="0.85"
-        android:pathData="M90,54 Q90,66 84,76 Q76,72 68,64 Q72,58 90,54 Z" />
+        android:fillColor="#FBC02D"
+        android:pathData="M64,20 Q74,28 80,40 Q70,42 60,38 Q56,30 58,20 Z" />
 
-    <!-- Panel 4 - Verde (abajo centro) -->
+    <!-- Panel Amarillo/dorado - abajo izquierda -->
     <path
-        android:fillColor="#2E7D32"
-        android:fillAlpha="0.85"
-        android:pathData="M76,88 Q66,90 54,90 Q44,90 32,88 Q40,72 54,66 Q68,72 76,88 Z" />
+        android:fillColor="#FBC02D"
+        android:pathData="M38,66 Q28,58 22,46 Q32,44 42,48 Q46,56 44,66 Z" />
 
-    <!-- Panel 5 - Naranja (abajo izquierda) -->
-    <path
-        android:fillColor="#E65100"
-        android:fillAlpha="0.85"
-        android:pathData="M18,54 Q18,66 24,76 Q32,72 40,64 Q36,58 18,54 Z" />
+    <!-- Panel Blanco puro - centro y laterales (queda como fondo) -->
 
-    <!-- Panel 6 - Violeta (izquierda) -->
-    <path
-        android:fillColor="#7B1FA2"
-        android:fillAlpha="0.85"
-        android:pathData="M34,22 Q22,30 18,44 Q30,48 36,46 Q40,38 34,22 Z" />
-
-    <!-- Costuras curvas repetidas encima de los paneles para que se vean bien -->
+    <!-- Costuras curvas principales - lineas negras gruesas -->
+    <!-- Costura vertical curva -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1.8"
-        android:pathData="M18,54 Q36,38 54,42 Q72,46 90,54" />
+        android:strokeColor="#333333"
+        android:strokeWidth="2"
+        android:pathData="M51,18 Q46,36 51,54 Q56,72 51,88" />
+
+    <!-- Costura vertical curva derecha -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1.8"
-        android:pathData="M32,20 Q40,44 54,54 Q68,64 76,88" />
+        android:strokeColor="#333333"
+        android:strokeWidth="2"
+        android:pathData="M57,18 Q62,36 57,54 Q52,72 57,88" />
+
+    <!-- Costura horizontal curva superior -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="1.8"
-        android:pathData="M76,20 Q68,44 54,54 Q40,64 32,88" />
+        android:strokeColor="#333333"
+        android:strokeWidth="2"
+        android:pathData="M20,42 Q36,48 54,44 Q72,40 88,42" />
+
+    <!-- Costura horizontal curva inferior -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#333333"
+        android:strokeWidth="2"
+        android:pathData="M20,48 Q36,42 54,46 Q72,50 88,48" />
+
+    <!-- Costura diagonal izquierda -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#333333"
+        android:strokeWidth="1.5"
+        android:pathData="M34,22 Q38,34 42,42" />
+
+    <!-- Costura diagonal derecha superior -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#333333"
+        android:strokeWidth="1.5"
+        android:pathData="M74,22 Q70,34 66,42" />
+
+    <!-- Costura diagonal izquierda inferior -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#333333"
+        android:strokeWidth="1.5"
+        android:pathData="M34,68 Q38,56 42,48" />
+
+    <!-- Costura diagonal derecha inferior -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#333333"
+        android:strokeWidth="1.5"
+        android:pathData="M74,68 Q70,56 66,48" />
 
     <!-- Borde exterior de la pelota -->
     <path
         android:fillColor="#00000000"
-        android:strokeColor="#37474F"
-        android:strokeWidth="2.5"
-        android:pathData="M54,18 A36,36 0 1,1 53.99,18 Z" />
+        android:strokeColor="#555555"
+        android:strokeWidth="2"
+        android:pathData="M54,18 A34,34 0 1,1 53.99,18 Z" />
+
+    <!-- Brillo superior sutil -->
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M42,24 Q50,20 62,24 Q56,30 48,30 Z" />
 </vector>

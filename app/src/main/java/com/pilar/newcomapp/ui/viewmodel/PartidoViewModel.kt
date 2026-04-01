@@ -6,6 +6,7 @@ import com.pilar.newcomapp.data.local.entity.PartidoEntity
 import com.pilar.newcomapp.data.local.entity.RotacionActualEntity
 import com.pilar.newcomapp.data.repository.PartidoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,11 +30,22 @@ class PartidoViewModel @Inject constructor(
     private val _advertenciaMixto = MutableStateFlow("")
     val advertenciaMixto: StateFlow<String> = _advertenciaMixto
 
-    // Almacen de liberos (nombre y datos guardados aparte de la rotacion)
+    // Estado para transicion de fin de set
+    data class FinDeSetInfo(
+        val setNumero: Int,
+        val puntosLocal: Int,
+        val puntosVisitante: Int,
+        val ganadorLocal: Boolean,
+        val partidoFinalizado: Boolean = false
+    )
+    private val _finDeSetTransicion = MutableStateFlow<FinDeSetInfo?>(null)
+    val finDeSetTransicion: StateFlow<FinDeSetInfo?> = _finDeSetTransicion
+
+    // Almacen de liberos (nombre y datos persistentes)
     private var liberoMNombre: String = ""
     private var liberoFNombre: String = ""
-    // Posicion original del jugador que el libero reemplazo
-    private var liberoMReemplazo: Int = -1  // indice 0-5
+    // Tracking: quien reemplazo cada libero (nombre del titular original)
+    private var liberoMReemplazo: Int = -1  // indice actual en cancha, -1 si no esta
     private var liberoFReemplazo: Int = -1
     private var titularReemplazadoM: String = ""
     private var titularReemplazadoF: String = ""
@@ -141,26 +153,23 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Guarda los nombres de los liberos para usarlos cuando se ingresan a cancha.
-     */
     fun guardarNombresLiberos(nombreM: String, nombreF: String) {
         liberoMNombre = nombreM
         liberoFNombre = nombreF
     }
 
-    /**
-     * Obtiene los nombres actuales de los liberos.
-     */
     fun obtenerNombresLiberos(): Pair<String, String> {
         return Pair(liberoMNombre, liberoFNombre)
     }
 
+    fun descartarTransicionSet() {
+        _finDeSetTransicion.value = null
+    }
+
     /**
-     * Ingresa el libero del sexo indicado en la primera posicion defensiva
-     * disponible (P1, P6, P5) de derecha a izquierda.
-     * Posiciones defensivas: indice 0 (P1), indice 5 (P6), indice 4 (P5).
-     * Si ya esta en cancha, lo saca y restaura al titular.
+     * Ingresa o saca el libero del sexo indicado.
+     * Al ingresar: reemplaza al primer jugador defensivo del mismo sexo.
+     * Al sacar: restaura al titular original.
      */
     fun ingresarLibero(sexo: String) {
         val rotacion = _rotacionActual.value ?: return
@@ -183,19 +192,17 @@ class PartidoViewModel @Inject constructor(
                 titularReemplazadoF = ""
             }
         } else {
-            // Buscar nombre del libero: usar el nombre guardado, o poner "Libero M"/"Libero F"
             val nombreLibero = if (sexo == "M") {
                 liberoMNombre.ifBlank { "Libero M" }
             } else {
                 liberoFNombre.ifBlank { "Libero F" }
             }
 
-            // Posiciones defensivas de derecha a izquierda: P1(indice 0), P6(indice 5), P5(indice 4)
+            // Posiciones defensivas: P1(indice 0), P6(indice 5), P5(indice 4)
             val posicionesDefensivas = listOf(0, 5, 4)
             var ingresado = false
 
             for (idx in posicionesDefensivas) {
-                // Solo reemplazar jugadores del mismo sexo que no sean libero
                 if (sexos[idx] == sexo && !liberos[idx]) {
                     if (sexo == "M") {
                         titularReemplazadoM = nombres[idx]
@@ -211,7 +218,7 @@ class PartidoViewModel @Inject constructor(
                 }
             }
 
-            if (!ingresado) return // No hay posicion defensiva disponible
+            if (!ingresado) return
         }
 
         val nueva = rotacion.copy(
@@ -285,6 +292,18 @@ class PartidoViewModel @Inject constructor(
             else -> p
         }
 
+        val setsNecesarios = if (p.cantidadSets == 1) 1 else 2
+        val partidoTerminado = sL >= setsNecesarios || sV >= setsNecesarios
+
+        // Mostrar transicion ANTES de resetear puntos
+        _finDeSetTransicion.value = FinDeSetInfo(
+            setNumero = p.setActual,
+            puntosLocal = p.puntosLocal,
+            puntosVisitante = p.puntosVisitante,
+            ganadorLocal = localGanaSet,
+            partidoFinalizado = partidoTerminado
+        )
+
         nP = nP.copy(
             setsLocal = sL,
             setsVisitante = sV,
@@ -293,14 +312,15 @@ class PartidoViewModel @Inject constructor(
             setActual = p.setActual + 1
         )
 
-        // Para 1 set: gana el primero en llegar a 1 set
-        // Para 3 sets: gana el primero en llegar a 2 sets
-        val setsNecesarios = if (p.cantidadSets == 1) 1 else 2
-        if (sL >= setsNecesarios || sV >= setsNecesarios) {
+        if (partidoTerminado) {
             nP = nP.copy(finalizado = true)
         }
 
         repository.actualizarPartido(nP)
+
+        // Auto-dismiss transicion despues de 4 segundos
+        delay(4000)
+        _finDeSetTransicion.value = null
     }
 
     fun restarPuntoLocal() {
@@ -325,13 +345,24 @@ class PartidoViewModel @Inject constructor(
         val s = mutableListOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
         val l = mutableListOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
         
-        // Antes de rotar, si hay libero en posicion defensiva que pasa a ataque, sacar
-        sacarLiberoSiPasaAAtaque(j, s, l)
+        // Paso 1: Sacar liberos de cancha (restaurar titulares)
+        sacarTodosLosLiberos(j, s, l)
+
+        // Paso 2: Rotar +1 (sentido agujas del reloj)
+        val jR = mutableListOf(j[1], j[2], j[3], j[4], j[5], j[0])
+        val sR = mutableListOf(s[1], s[2], s[3], s[4], s[5], s[0])
+        val lR = mutableListOf(l[1], l[2], l[3], l[4], l[5], l[0])
+
+        // Paso 3: Re-ingresar liberos en nuevas posiciones defensivas
+        reIngresarLiberos(jR, sR, lR)
 
         val nueva = rotacion.copy(
-            posicion1 = j[1], posicion2 = j[2], posicion3 = j[3], posicion4 = j[4], posicion5 = j[5], posicion6 = j[0],
-            sexo1 = s[1], sexo2 = s[2], sexo3 = s[3], sexo4 = s[4], sexo5 = s[5], sexo6 = s[0],
-            libero1 = l[1], libero2 = l[2], libero3 = l[3], libero4 = l[4], libero5 = l[5], libero6 = l[0]
+            posicion1 = jR[0], posicion2 = jR[1], posicion3 = jR[2],
+            posicion4 = jR[3], posicion5 = jR[4], posicion6 = jR[5],
+            sexo1 = sR[0], sexo2 = sR[1], sexo3 = sR[2],
+            sexo4 = sR[3], sexo5 = sR[4], sexo6 = sR[5],
+            libero1 = lR[0], libero2 = lR[1], libero3 = lR[2],
+            libero4 = lR[3], libero5 = lR[4], libero6 = lR[5]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -345,12 +376,24 @@ class PartidoViewModel @Inject constructor(
         val s = mutableListOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
         val l = mutableListOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
         
-        sacarLiberoSiPasaAAtaque(j, s, l)
+        // Paso 1: Sacar liberos de cancha
+        sacarTodosLosLiberos(j, s, l)
+
+        // Paso 2: Rotar -1
+        val jR = mutableListOf(j[5], j[0], j[1], j[2], j[3], j[4])
+        val sR = mutableListOf(s[5], s[0], s[1], s[2], s[3], s[4])
+        val lR = mutableListOf(l[5], l[0], l[1], l[2], l[3], l[4])
+
+        // Paso 3: Re-ingresar liberos
+        reIngresarLiberos(jR, sR, lR)
 
         val nueva = rotacion.copy(
-            posicion1 = j[5], posicion2 = j[0], posicion3 = j[1], posicion4 = j[2], posicion5 = j[3], posicion6 = j[4],
-            sexo1 = s[5], sexo2 = s[0], sexo3 = s[1], sexo4 = s[2], sexo5 = s[3], sexo6 = s[4],
-            libero1 = l[5], libero2 = l[0], libero3 = l[1], libero4 = l[2], libero5 = l[3], libero6 = l[4]
+            posicion1 = jR[0], posicion2 = jR[1], posicion3 = jR[2],
+            posicion4 = jR[3], posicion5 = jR[4], posicion6 = jR[5],
+            sexo1 = sR[0], sexo2 = sR[1], sexo3 = sR[2],
+            sexo4 = sR[3], sexo5 = sR[4], sexo6 = sR[5],
+            libero1 = lR[0], libero2 = lR[1], libero3 = lR[2],
+            libero4 = lR[3], libero5 = lR[4], libero6 = lR[5]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -359,30 +402,60 @@ class PartidoViewModel @Inject constructor(
     }
 
     /**
-     * Antes de rotar, verifica si un libero esta en una posicion defensiva
-     * que al rotar pasaria a posicion de ataque. Si es asi, lo saca y
-     * restaura al titular original.
+     * Saca todos los liberos que estan en cancha, restaurando sus titulares.
+     * Esto se hace ANTES de rotar para que el titular vuelva a su posicion
+     * y luego rote normalmente.
      */
-    private fun sacarLiberoSiPasaAAtaque(
+    private fun sacarTodosLosLiberos(
         nombres: MutableList<String>,
         sexos: MutableList<String>,
         liberos: MutableList<Boolean>
     ) {
-        for (idx in listOf(0, 4, 5)) {
-            if (liberos[idx]) {
-                val sexoLib = sexos[idx]
-                val titular = if (sexoLib == "M") titularReemplazadoM else titularReemplazadoF
-                if (titular.isNotBlank()) {
-                    nombres[idx] = titular
-                    liberos[idx] = false
-                    if (sexoLib == "M") {
-                        liberoMReemplazo = -1
-                        titularReemplazadoM = ""
-                    } else {
-                        liberoFReemplazo = -1
-                        titularReemplazadoF = ""
-                    }
-                }
+        if (liberoMReemplazo >= 0 && liberos[liberoMReemplazo]) {
+            nombres[liberoMReemplazo] = titularReemplazadoM
+            liberos[liberoMReemplazo] = false
+            liberoMReemplazo = -1
+        }
+        if (liberoFReemplazo >= 0 && liberos[liberoFReemplazo]) {
+            nombres[liberoFReemplazo] = titularReemplazadoF
+            liberos[liberoFReemplazo] = false
+            liberoFReemplazo = -1
+        }
+    }
+
+    /**
+     * Despues de rotar, busca al titular que cada libero reemplazaba.
+     * Si ese titular ahora esta en posicion defensiva, lo reemplaza de nuevo.
+     * Si esta en posicion de ataque, el libero no entra.
+     */
+    private fun reIngresarLiberos(
+        nombres: MutableList<String>,
+        sexos: MutableList<String>,
+        liberos: MutableList<Boolean>
+    ) {
+        val posicionesDefensivas = setOf(0, 4, 5) // P1, P5, P6
+
+        // Re-ingresar libero M si tenia un titular asignado
+        if (titularReemplazadoM.isNotBlank()) {
+            val idx = nombres.indexOf(titularReemplazadoM)
+            if (idx >= 0 && idx in posicionesDefensivas) {
+                val nombreLibero = liberoMNombre.ifBlank { "Libero M" }
+                nombres[idx] = nombreLibero
+                liberos[idx] = true
+                liberoMReemplazo = idx
+            }
+            // Si el titular esta en ataque, el libero no entra pero mantiene
+            // titularReemplazadoM para la proxima rotacion
+        }
+
+        // Re-ingresar libero F
+        if (titularReemplazadoF.isNotBlank()) {
+            val idx = nombres.indexOf(titularReemplazadoF)
+            if (idx >= 0 && idx in posicionesDefensivas) {
+                val nombreLibero = liberoFNombre.ifBlank { "Libero F" }
+                nombres[idx] = nombreLibero
+                liberos[idx] = true
+                liberoFReemplazo = idx
             }
         }
     }
