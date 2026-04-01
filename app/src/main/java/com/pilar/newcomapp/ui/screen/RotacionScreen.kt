@@ -19,12 +19,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.pilar.newcomapp.ui.viewmodel.PartidoViewModel
 
-val ColorMasculino = Color(0xFF1565C0)      // Azul oscuro
-val ColorFemenino = Color(0xFFC62828)       // Rojo oscuro
-val ColorLibero = Color(0xFF2E7D32)         // Verde oscuro
+val ColorMasculino = Color(0xFF1565C0) // Azul oscuro
+val ColorFemenino = Color(0xFFC62828) // Rojo oscuro
+val ColorLibero = Color(0xFF2E7D32) // Verde oscuro
 val ColorFondoMasculino = Color(0xFFE3F2FD) // Azul claro
-val ColorFondoFemenino = Color(0xFFFFEBEE)  // Rojo claro
-val ColorFondoLibero = Color(0xFFE8F5E9)    // Verde claro
+val ColorFondoFemenino = Color(0xFFFFEBEE) // Rojo claro
+val ColorFondoLibero = Color(0xFFE8F5E9) // Verde claro
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,30 +76,76 @@ fun RotacionScreen(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Mini Marcador (aprox 20-25% de la pantalla)
+            partido?.let { p ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Local
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(p.nombreEquipoLocal.take(8), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                            Text("${p.puntosLocal}", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color(0xFF1565C0))
+                        }
+                        
+                        // Sets y VS
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("SET ${p.setActual}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            Text("${p.setsLocal} - ${p.setsVisitante}", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                            Row {
+                                IconButton(onClick = { viewModel.sumarPuntoLocal() }, modifier = Modifier.size(32.dp)) {
+                                    Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFF1565C0)) {
+                                        Text("+", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp))
+                                    }
+                                }
+                                IconButton(onClick = { viewModel.sumarPuntoVisitante() }, modifier = Modifier.size(32.dp)) {
+                                    Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFC62828)) {
+                                        Text("+", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp))
+                                    }
+                                }
+                            }
+                        }
+
+                        // Visitante
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(p.nombreEquipoVisitante.take(8), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
+                            Text("${p.puntosVisitante}", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color(0xFFC62828))
+                        }
+                    }
+                }
+            }
+
             rotacion?.let { rot ->
-                val nombres = listOf(rot.posicion1, rot.posicion2, rot.posicion3,
-                    rot.posicion4, rot.posicion5, rot.posicion6)
-                val sexos = listOf(rot.sexo1, rot.sexo2, rot.sexo3,
-                    rot.sexo4, rot.sexo5, rot.sexo6)
-                val liberos = listOf(rot.libero1, rot.libero2, rot.libero3,
-                    rot.libero4, rot.libero5, rot.libero6)
+                val nombres = listOf(rot.posicion1, rot.posicion2, rot.posicion3, rot.posicion4, rot.posicion5, rot.posicion6)
+                val sexos = listOf(rot.sexo1, rot.sexo2, rot.sexo3, rot.sexo4, rot.sexo5, rot.sexo6)
+                val liberos = listOf(rot.libero1, rot.libero2, rot.libero3, rot.libero4, rot.libero5, rot.libero6)
 
                 // Indicador de red
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(6.dp),
+                        .height(4.dp),
                     color = Color(0xFFFF6F00)
                 ) {}
                 Text(
                     text = "RED",
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFFF6F00),
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center
                 )
-
+                
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Fila delantera (posiciones 4, 3, 2)
@@ -109,9 +155,9 @@ fun RotacionScreen(
                         .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf(3 to 3, 2 to 2, 1 to 1).forEach { (indice, pos) ->
+                    listOf(3, 2, 1).forEach { indice ->
                         JugadorCard(
-                            posicion = pos + 1, // posicion 4,3,2 -> indices 3,2,1
+                            posicion = indice + 1,
                             nombre = nombres[indice],
                             sexo = sexos[indice],
                             esLibero = liberos[indice],
@@ -129,9 +175,9 @@ fun RotacionScreen(
                         .weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf(4 to 4, 5 to 5, 0 to 0).forEach { (indice, pos) ->
+                    listOf(4, 5, 0).forEach { indice ->
                         JugadorCard(
-                            posicion = if (pos == 0) 1 else pos + 1,
+                            posicion = if (indice == 0) 1 else indice + 1,
                             nombre = nombres[indice],
                             sexo = sexos[indice],
                             esLibero = liberos[indice],
@@ -150,9 +196,9 @@ fun RotacionScreen(
                     ) {
                         Text(
                             text = advertencia,
-                            modifier = Modifier.padding(8.dp),
+                            modifier = Modifier.padding(4.dp),
                             color = Color(0xFFE65100),
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
@@ -168,31 +214,22 @@ fun RotacionScreen(
                 ) {
                     Button(
                         onClick = { viewModel.rotarAnterior() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF37474F)
-                        )
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF37474F))
                     ) {
-                        Text("<< Rotar -1", fontWeight = FontWeight.Bold)
+                        Text("<< ROTAR -1", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                     Button(
                         onClick = { viewModel.rotarSiguiente() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1B5E20)
-                        )
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1B5E20))
                     ) {
-                        Text("Rotar +1 >>", fontWeight = FontWeight.Bold)
+                        Text("ROTAR +1 >>", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
-
             } ?: run {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("Cargando rotacion...")
-                    }
+                    CircularProgressIndicator()
                 }
             }
         }
@@ -223,7 +260,7 @@ fun JugadorCard(
         else -> ColorMasculino
     }
     val etiqueta = when {
-        esLibero -> "LIBERO"
+        esLibero -> "LIB"
         sexo == "F" -> "F"
         else -> "M"
     }
@@ -237,38 +274,35 @@ fun JugadorCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Numero de posicion
             Text(
                 text = "$posicion",
-                fontSize = 32.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorTexto
             )
-            // Nombre del jugador
             Text(
                 text = if (nombre.isBlank()) "---" else nombre,
-                fontSize = 15.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 textAlign = TextAlign.Center,
-                maxLines = 2
+                maxLines = 1
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            // Etiqueta sexo / libero
+            Spacer(modifier = Modifier.height(2.dp))
             Surface(
                 color = colorBorde,
                 shape = RoundedCornerShape(4.dp)
             ) {
                 Text(
                     text = etiqueta,
-                    fontSize = 11.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                 )
             }
         }
