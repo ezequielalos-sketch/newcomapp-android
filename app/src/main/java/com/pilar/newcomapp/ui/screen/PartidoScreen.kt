@@ -2,7 +2,9 @@ package com.pilar.newcomapp.ui.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.List
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.pilar.newcomapp.data.local.entity.PartidoEntity
 import com.pilar.newcomapp.ui.viewmodel.PartidoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,12 +36,12 @@ fun PartidoScreen(
                 title = { Text("Marcador Newcom", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onAtras) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atras")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
                     }
                 },
                 actions = {
                     IconButton(onClick = onVerRotacion) {
-                        Icon(Icons.Default.List, contentDescription = "Rotacion")
+                        Icon(Icons.Default.List, contentDescription = "Rotación")
                     }
                 }
             )
@@ -48,137 +51,100 @@ fun PartidoScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5F5))
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             partido?.let { p ->
-                // Header con info del partido
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                // Nombre de equipos
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "${p.modalidad} - ${p.categoria}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Sets: ", fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                            Text(
-                                text = "${p.setsLocal}",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF1565C0)
-                            )
-                            Text(" - ", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
-                            Text(
-                                text = "${p.setsVisitante}",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFFC62828)
-                            )
-                        }
-                        if (p.finalizado) {
-                            Text(
-                                text = "PARTIDO FINALIZADO",
-                                color = Color.Red,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    }
+                    Text(text = p.nombreEquipoLocal, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                    Text(text = "vs", color = Color.Gray, modifier = Modifier.padding(horizontal = 8.dp))
+                    Text(text = p.nombreEquipoVisitante, fontWeight = FontWeight.Bold, fontSize = 20.sp, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
 
-                // Marcador Principal
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Marcador de Sets
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    // Equipo Local
-                    MarcadorEquipo(
-                        nombre = p.nombreEquipoLocal,
-                        puntos = p.puntosLocal,
-                        color = Color(0xFF1565C0), // Azul
-                        onSumar = { viewModel.sumarPuntoLocal() },
-                        onRestar = { viewModel.restarPuntoLocal() },
-                        modifier = Modifier.weight(1f)
+                    SetScoreItem(score = p.setsLocal, color = Color(0xFF1565C0))
+                    Text(text = "SETS", modifier = Modifier.padding(horizontal = 16.dp), fontWeight = FontWeight.Bold, color = Color.Gray)
+                    SetScoreItem(score = p.setsVisitante, color = Color(0xFFC62828))
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Set Actual: ${p.setActual}", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Marcador de Puntos
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ScoreColumn(
+                        points = p.puntosLocal,
+                        onPlus = { viewModel.sumarPuntoLocal() },
+                        onMinus = { viewModel.restarPuntoLocal() },
+                        color = Color(0xFF1565C0)
                     )
 
-                    // Equipo Visitante
-                    MarcadorEquipo(
-                        nombre = p.nombreEquipoVisitante,
-                        puntos = p.puntosVisitante,
-                        color = Color(0xFFC62828), // Rojo
-                        onSumar = { viewModel.sumarPuntoVisitante() },
-                        onRestar = { viewModel.restarPuntoVisitante() },
-                        modifier = Modifier.weight(1f)
+                    ScoreColumn(
+                        points = p.puntosVisitante,
+                        onPlus = { viewModel.sumarPuntoVisitante() },
+                        onMinus = { viewModel.restarPuntoVisitante() },
+                        color = Color(0xFFC62828)
                     )
                 }
 
-                // Historial de sets
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE0E0E0))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        SetResultItem("Set 1", p.set1Local, p.set1Visitante)
-                        SetResultItem("Set 2", p.set2Local, p.set2Visitante)
-                        SetResultItem("Set 3", p.set3Local, p.set3Visitante)
-                    }
+                Spacer(modifier = Modifier.height(40.dp))
+
+                // Historial de Sets
+                Text(
+                    text = "HISTORIAL DE SETS",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                
+                SetResultRow("Set 1", p.set1Local, p.set1Visitante)
+                SetResultRow("Set 2", p.set2Local, p.set2Visitante)
+                if (p.cantidadSets == 3) {
+                    SetResultRow("Set 3", p.set3Local, p.set3Visitante)
                 }
 
-                // Botones de accion
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Spacer(modifier = Modifier.height(40.dp))
+
+                Button(
+                    onClick = onVerRotacion,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Button(
-                        onClick = onVerRotacion,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF455A64))
-                    ) {
-                        Text("VER ROTACION", fontWeight = FontWeight.Bold)
-                    }
-                    if (!p.finalizado) {
-                        Button(
-                            onClick = { viewModel.finalizarSet() },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
-                        ) {
-                            Text("FORZAR FIN SET", fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    Text("VER ROTACIÓN / JUGADORES", fontWeight = FontWeight.Bold)
+                }
+                
+                if (p.finalizado) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "PARTIDO FINALIZADO",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 18.sp
+                    )
                 }
             } ?: run {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Cargando partido...")
+                    Text("No hay partido activo")
                 }
             }
         }
@@ -186,84 +152,60 @@ fun PartidoScreen(
 }
 
 @Composable
-fun MarcadorEquipo(
-    nombre: String,
-    puntos: Int,
-    color: Color,
-    onSumar: () -> Unit,
-    onRestar: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.fillMaxHeight(),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
-        border = androidx.compose.foundation.BorderStroke(2.dp, color),
-        shape = RoundedCornerShape(16.dp)
+fun SetScoreItem(score: Int, color: Color) {
+    Surface(
+        color = color,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.size(48.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = nombre.uppercase(),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                color = color,
-                textAlign = TextAlign.Center,
-                maxLines = 1
-            )
-            
-            Text(
-                text = "$puntos",
-                fontSize = 110.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = color
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                FilledTonalButton(
-                    onClick = onRestar,
-                    modifier = Modifier.size(64.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(0.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = color.copy(alpha = 0.2f))
-                ) {
-                    Text("-", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
-                }
-                
-                Button(
-                    onClick = onSumar,
-                    modifier = Modifier.size(64.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(0.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = color)
-                ) {
-                    Text("+", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            }
+        Box(contentAlignment = Alignment.Center) {
+            Text(text = "$score", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun SetResultItem(label: String, local: Int, visitante: Int) {
+fun ScoreColumn(points: Int, onPlus: () -> Unit, onMinus: () -> Unit, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        if (local != -1) {
-            Text(
-                text = "$local - $visitante",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (local > visitante) Color(0xFF1565C0) else Color(0xFFC62828)
-            )
-        } else {
-            Text("-", fontSize = 16.sp, color = Color.Gray)
+        IconButton(onClick = onPlus, modifier = Modifier.size(80.dp)) {
+            Surface(shape = RoundedCornerShape(16.dp), color = color.copy(alpha = 0.1f)) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("+", fontSize = 48.sp, color = color, fontWeight = FontWeight.Light)
+                }
+            }
         }
+        
+        Text(
+            text = "$points",
+            fontSize = 80.sp,
+            fontWeight = FontWeight.Black,
+            color = color,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        
+        OutlinedButton(
+            onClick = onMinus,
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier.width(60.dp)
+        ) {
+            Text("-1", color = color, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun SetResultRow(label: String, local: Int, visitante: Int) {
+    if (local == -1) return
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Text(
+            text = "$local - $visitante",
+            fontWeight = FontWeight.ExtraBold,
+            color = if (local > visitante) Color(0xFF1565C0) else Color(0xFFC62828)
+        )
     }
 }
