@@ -31,7 +31,7 @@ fun ConfigurarJugadoresScreen(
     var cantidadSets by remember(partido) { mutableStateOf(partido?.cantidadSets ?: 3) }
     var puntajePorSet by remember(partido) { mutableStateOf(partido?.puntajePorSet ?: 15) }
 
-    // Jugadores
+    // Jugadores (6 titulares)
     val nombres = remember(rotacion) {
         mutableStateListOf(
             rotacion?.posicion1 ?: "",
@@ -53,8 +53,21 @@ fun ConfigurarJugadoresScreen(
         )
     }
 
+    // Liberos (2 posibles)
+    var liberoMNombre by remember { mutableStateOf("") }
+    var liberoMSexo by remember { mutableStateOf("M") }
+    var liberoFNombre by remember { mutableStateOf("") }
+    var liberoFSexo by remember { mutableStateOf("F") }
+
+    // Inicializar nombres de liberos desde ViewModel
+    LaunchedEffect(Unit) {
+        val nombresLiberos = viewModel.obtenerNombresLiberos()
+        liberoMNombre = nombresLiberos.first
+        liberoFNombre = nombresLiberos.second
+    }
+
     val modalidades = listOf("Masculino", "Femenino", "Mixto")
-    val categorias = listOf("Open", "+40", "+45", "+50", "+55", "+60", "+65", "+68")
+    val categorias = listOf("+40", "+50", "+60", "+68")
     val opcionesSets = listOf(1, 3)
     val opcionesPuntaje = listOf(15, 21)
 
@@ -110,26 +123,13 @@ fun ConfigurarJugadoresScreen(
             Text("Categoria:", fontWeight = FontWeight.SemiBold)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                categorias.take(4).forEach { cat ->
+                categorias.forEach { cat ->
                     FilterChip(
                         selected = categoria == cat,
                         onClick = { categoria = cat },
-                        label = { Text(cat, fontSize = 12.sp) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                categorias.drop(4).forEach { cat ->
-                    FilterChip(
-                        selected = categoria == cat,
-                        onClick = { categoria = cat },
-                        label = { Text(cat, fontSize = 12.sp) },
+                        label = { Text(cat, fontSize = 13.sp) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -168,7 +168,7 @@ fun ConfigurarJugadoresScreen(
             HorizontalDivider()
 
             // === SECCION JUGADORES ===
-            Text("Jugadores en Cancha",
+            Text("Jugadores en Cancha (6 titulares)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary)
@@ -201,7 +201,7 @@ fun ConfigurarJugadoresScreen(
                         Text(
                             text = etiquetasPosicion[i],
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             color = colorBorde
                         )
                         OutlinedTextField(
@@ -209,7 +209,8 @@ fun ConfigurarJugadoresScreen(
                             onValueChange = { nombres[i] = it },
                             label = { Text("Nombre") },
                             modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 16.sp)
                         )
                         // Sexo (solo en Mixto)
                         if (modalidad == "Mixto") {
@@ -217,7 +218,7 @@ fun ConfigurarJugadoresScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("Sexo:", fontSize = 13.sp)
+                                Text("Sexo:", fontSize = 14.sp)
                                 FilterChip(
                                     selected = sexos[i] == "M",
                                     onClick = { sexos[i] = "M" },
@@ -234,6 +235,78 @@ fun ConfigurarJugadoresScreen(
                 }
             }
 
+            HorizontalDivider()
+
+            // === SECCION LIBEROS ===
+            Text("Liberos (opcionales)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2E7D32))
+
+            Text(
+                "Los liberos se activan desde la pantalla de Rotacion con los botones Libero M / Libero F",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Libero M
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE8F5E9)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Libero Masculino",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF1565C0)
+                    )
+                    OutlinedTextField(
+                        value = liberoMNombre,
+                        onValueChange = { liberoMNombre = it },
+                        label = { Text("Nombre Libero M") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp)
+                    )
+                }
+            }
+
+            // Libero F
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFFCE4EC)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Libero Femenino",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color(0xFFC62828)
+                    )
+                    OutlinedTextField(
+                        value = liberoFNombre,
+                        onValueChange = { liberoFNombre = it },
+                        label = { Text("Nombre Libero F") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        textStyle = LocalTextStyle.current.copy(fontSize = 16.sp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
@@ -241,13 +314,15 @@ fun ConfigurarJugadoresScreen(
                     viewModel.actualizarConfiguracionPartido(
                         modalidad, categoria, cantidadSets, puntajePorSet
                     )
-                    // No pasar liberos - ahora se manejan desde los botones de libero
+                    // Guardar jugadores titulares
                     val liberosVacios = List(6) { false }
                     viewModel.guardarNombresJugadores(
                         nombres.toList(),
                         sexos.toList(),
                         liberosVacios
                     )
+                    // Guardar nombres de liberos
+                    viewModel.guardarNombresLiberos(liberoMNombre, liberoFNombre)
                     onAtras()
                 },
                 modifier = Modifier.fillMaxWidth()

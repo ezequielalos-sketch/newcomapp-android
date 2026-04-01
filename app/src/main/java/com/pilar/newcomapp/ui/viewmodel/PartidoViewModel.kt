@@ -142,9 +142,24 @@ class PartidoViewModel @Inject constructor(
     }
 
     /**
+     * Guarda los nombres de los liberos para usarlos cuando se ingresan a cancha.
+     */
+    fun guardarNombresLiberos(nombreM: String, nombreF: String) {
+        liberoMNombre = nombreM
+        liberoFNombre = nombreF
+    }
+
+    /**
+     * Obtiene los nombres actuales de los liberos.
+     */
+    fun obtenerNombresLiberos(): Pair<String, String> {
+        return Pair(liberoMNombre, liberoFNombre)
+    }
+
+    /**
      * Ingresa el libero del sexo indicado en la primera posicion defensiva
-     * disponible (P6, P5, P1) de derecha a izquierda.
-     * Posiciones defensivas: indice 5 (P6), indice 4 (P5), indice 0 (P1).
+     * disponible (P1, P6, P5) de derecha a izquierda.
+     * Posiciones defensivas: indice 0 (P1), indice 5 (P6), indice 4 (P5).
      * Si ya esta en cancha, lo saca y restaura al titular.
      */
     fun ingresarLibero(sexo: String) {
@@ -347,22 +362,12 @@ class PartidoViewModel @Inject constructor(
      * Antes de rotar, verifica si un libero esta en una posicion defensiva
      * que al rotar pasaria a posicion de ataque. Si es asi, lo saca y
      * restaura al titular original.
-     *
-     * Posiciones de ataque (despues de rotar +1): las que estan en indices 1,2,3
-     * Para rotar +1: indice 0 (P1) pasa al final, todos suben uno.
-     *   - El que estaba en indice 4 (P5) pasa a indice 3 (P4=ataque)
-     * Para la logica simple: si un libero esta en posicion que va a ataque, restaurar.
      */
     private fun sacarLiberoSiPasaAAtaque(
         nombres: MutableList<String>,
         sexos: MutableList<String>,
         liberos: MutableList<Boolean>
     ) {
-        // Al rotar +1, la posicion en indice 4 (P5) pasa a indice 3 (P4=ataque)
-        // Al rotar -1, la posicion en indice 1 (P2) pasa a indice 0 (pero P2 ya es ataque)
-        // Posiciones defensivas: indices 0(P1), 4(P5), 5(P6)
-        // Posiciones de ataque: indices 1(P2), 2(P3), 3(P4)
-        
         for (idx in listOf(0, 4, 5)) {
             if (liberos[idx]) {
                 val sexoLib = sexos[idx]

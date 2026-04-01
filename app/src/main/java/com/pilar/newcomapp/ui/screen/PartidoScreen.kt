@@ -1,5 +1,6 @@
 package com.pilar.newcomapp.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -7,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +30,20 @@ fun PartidoScreen(
 ) {
     val partido by viewModel.partidoActivo.collectAsState()
 
-    // Estado local para editar nombres
+    // Estado local para editar nombres - se sincronizan con el partido
     var editandoNombres by remember { mutableStateOf(false) }
-    var nombreLocal by remember(partido) { mutableStateOf(partido?.nombreEquipoLocal ?: "Nosotros") }
-    var nombreVisitante by remember(partido) { mutableStateOf(partido?.nombreEquipoVisitante ?: "Rival") }
+    var nombreLocal by remember { mutableStateOf("") }
+    var nombreVisitante by remember { mutableStateOf("") }
+    var nombresIniciados by remember { mutableStateOf(false) }
+
+    // Sincronizar nombres solo la primera vez o cuando cambie el partido ID
+    LaunchedEffect(partido?.id) {
+        partido?.let {
+            nombreLocal = it.nombreEquipoLocal
+            nombreVisitante = it.nombreEquipoVisitante
+            nombresIniciados = true
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -59,7 +71,7 @@ fun PartidoScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             partido?.let { p ->
-                // Nombre de equipos - tocable para editar
+                // Nombre de equipos - editable
                 if (editandoNombres) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -93,16 +105,34 @@ fun PartidoScreen(
                     }
                 } else {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { editandoNombres = true },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = p.nombreEquipoLocal, fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                        Text(
+                            text = if (nombresIniciados) nombreLocal else p.nombreEquipoLocal,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            modifier = Modifier.weight(1f)
+                        )
                         Text(text = "vs", color = Color.Gray, modifier = Modifier.padding(horizontal = 8.dp))
-                        Text(text = p.nombreEquipoVisitante, fontWeight = FontWeight.Bold, fontSize = 20.sp, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    TextButton(onClick = { editandoNombres = true }) {
-                        Text("Editar nombres", fontSize = 12.sp)
+                        Text(
+                            text = if (nombresIniciados) nombreVisitante else p.nombreEquipoVisitante,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Editar nombres",
+                            tint = Color.Gray,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(20.dp)
+                        )
                     }
                 }
 
@@ -168,6 +198,56 @@ fun PartidoScreen(
                     SetResultRow("Set 3", p.set3Local, p.set3Visitante)
                 }
 
+                // Si el partido esta finalizado, mostrar resultado con ultimo set visible
+                if (p.finalizado) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Resultado final destacado
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(0xFFF1F8E9)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "PARTIDO FINALIZADO",
+                                color = Color(0xFF2E7D32),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 20.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val ganador = if (p.setsLocal > p.setsVisitante) {
+                                if (nombresIniciados) nombreLocal else p.nombreEquipoLocal
+                            } else {
+                                if (nombresIniciados) nombreVisitante else p.nombreEquipoVisitante
+                            }
+                            val colorGanador = if (p.setsLocal > p.setsVisitante) Color(0xFF1565C0) else Color(0xFFC62828)
+
+                            Text(
+                                text = "Ganador: $ganador",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = colorGanador
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Sets: ${p.setsLocal} - ${p.setsVisitante}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
@@ -177,26 +257,7 @@ fun PartidoScreen(
                 ) {
                     Text("VER ROTACION / JUGADORES", fontWeight = FontWeight.Bold)
                 }
-                
-                if (p.finalizado) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Resultado final
-                    val ganador = if (p.setsLocal > p.setsVisitante) p.nombreEquipoLocal else p.nombreEquipoVisitante
-                    Text(
-                        text = "PARTIDO FINALIZADO",
-                        color = Color(0xFF2E7D32),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 18.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Ganador: $ganador",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (p.setsLocal > p.setsVisitante) Color(0xFF1565C0) else Color(0xFFC62828)
-                    )
-                }
+
             } ?: run {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No hay partido activo")
