@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PartidoDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarPartido(partido: PartidoEntity): Long
 
@@ -22,6 +21,6 @@ interface PartidoDao {
     @Query("SELECT * FROM partidos WHERE id = :id")
     fun obtenerPartidoPorId(id: Long): Flow<PartidoEntity?>
 
-    @Query("SELECT * FROM partidos WHERE finalizado = 0 LIMIT 1")
+    @Query("SELECT * FROM partidos WHERE finalizado = 0 ORDER BY fechaCreacion DESC LIMIT 1")
     fun obtenerPartidoActivo(): Flow<PartidoEntity?>
 }
