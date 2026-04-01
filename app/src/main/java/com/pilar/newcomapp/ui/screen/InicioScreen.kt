@@ -40,7 +40,7 @@ fun InicioScreen(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Mas zapatillas y menos pastillas",
+            text = "El deporte no tiene edad, tiene actitud",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
