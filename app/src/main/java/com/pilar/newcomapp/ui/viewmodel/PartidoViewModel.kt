@@ -61,7 +61,7 @@ class PartidoViewModel @Inject constructor(
         modalidad: String = "Masculino",
         categoria: String = "+40",
         cantidadSets: Int = 3,
-        puntajePorSet: Int = 25
+        puntajePorSet: Int = 15
     ) {
         viewModelScope.launch {
             val partido = PartidoEntity(
@@ -70,9 +70,11 @@ class PartidoViewModel @Inject constructor(
                 modalidad = modalidad,
                 categoria = categoria,
                 cantidadSets = cantidadSets,
-                puntajePorSet = puntajePorSet
+                puntajePorSet = puntajePorSet,
+                puntajeSetFinal = 10
             )
             val id = repository.crearPartido(partido)
+            
             val sexoDefault = if (modalidad == "Femenino") "F" else "M"
             val rotacion = RotacionActualEntity(
                 partidoId = id,
@@ -85,76 +87,102 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
-    fun actualizarConfiguracionPartido(
-        modalidad: String,
-        categoria: String,
-        cantidadSets: Int,
-        puntajePorSet: Int
-    ) {
-        val partido = partidoActivo.value ?: return
-        viewModelScope.launch {
-            repository.actualizarPartido(
-                partido.copy(
-                    modalidad = modalidad,
-                    categoria = categoria,
-                    cantidadSets = cantidadSets,
-                    puntajePorSet = puntajePorSet
-                )
-            )
-        }
-    }
-
     fun sumarPuntoLocal() {
-        val partido = partidoActivo.value ?: return
+        val p = partidoActivo.value ?: return
         viewModelScope.launch {
-            repository.actualizarPartido(partido.copy(puntosLocal = partido.puntosLocal + 1))
+            repository.actualizarPartido(p.copy(puntosLocal = p.puntosLocal + 1))
+            verificarFinDeSet()
         }
     }
 
     fun sumarPuntoVisitante() {
-        val partido = partidoActivo.value ?: return
+        val p = partidoActivo.value ?: return
         viewModelScope.launch {
-            repository.actualizarPartido(partido.copy(puntosVisitante = partido.puntosVisitante + 1))
+            repository.actualizarPartido(p.copy(puntosVisitante = p.puntosVisitante + 1))
+            verificarFinDeSet()
         }
     }
 
-    fun restarPuntoLocal() {
-        val partido = partidoActivo.value ?: return
-        if (partido.puntosLocal <= 0) return
+    private suspend fun verificarFinDeSet() {
+        val p = repository.obtenerPartidoActivo().first() ?: return
+        
+        val limite = if (p.setActual < p.cantidadSets) p.puntajePorSet else p.puntajeSetFinal
+        val topeMax = if (p.setActual < p.cantidadSets) 17 else 12
+        
+        val puntosL = p.puntosLocal
+        val puntosV = p.puntosVisitante
+
+        val localGanaSet = (puntosL >= limite && (puntosL - puntosV) >= 2) || puntosL >= topeMax
+        val visitanteGanaSet = (puntosV >= limite && (puntosV - puntosL) >= 2) || puntosV >= topeMax
+
+        if (localGanaSet || visitanteGanaSet) {
+            finalizarSetInternal(p, localGanaSet)
+        }
+    }
+
+    fun finalizarSet() {
+        val p = partidoActivo.value ?: return
+        val localGanaSet = p.puntosLocal > p.puntosVisitante
         viewModelScope.launch {
-            repository.actualizarPartido(partido.copy(puntosLocal = partido.puntosLocal - 1))
+            finalizarSetInternal(p, localGanaSet)
+        }
+    }
+
+    private suspend fun finalizarSetInternal(p: PartidoEntity, localGanaSet: Boolean) {
+        val sL = if (localGanaSet) p.setsLocal + 1 else p.setsLocal
+        val sV = if (!localGanaSet) p.setsVisitante + 1 else p.setsVisitante
+        
+        // Guardar resultado del set en el historial
+        var nP = when (p.setActual) {
+            1 -> p.copy(set1Local = p.puntosLocal, set1Visitante = p.puntosVisitante)
+            2 -> p.copy(set2Local = p.puntosLocal, set2Visitante = p.puntosVisitante)
+            3 -> p.copy(set3Local = p.puntosLocal, set3Visitante = p.puntosVisitante)
+            else -> p
+        }
+
+        nP = nP.copy(
+            setsLocal = sL,
+            setsVisitante = sV,
+            puntosLocal = 0,
+            puntosVisitante = 0,
+            setActual = p.setActual + 1
+        )
+
+        // Verificar si termino el partido
+        val setsNecesarios = if (p.cantidadSets == 3) 2 else 3
+        if (sL >= setsNecesarios || sV >= setsNecesarios) {
+            nP = nP.copy(finalizado = true)
+        }
+
+        repository.actualizarPartido(nP)
+    }
+
+    fun restarPuntoLocal() {
+        val p = partidoActivo.value ?: return
+        if (p.puntosLocal <= 0) return
+        viewModelScope.launch {
+            repository.actualizarPartido(p.copy(puntosLocal = p.puntosLocal - 1))
         }
     }
 
     fun restarPuntoVisitante() {
-        val partido = partidoActivo.value ?: return
-        if (partido.puntosVisitante <= 0) return
+        val p = partidoActivo.value ?: return
+        if (p.puntosVisitante <= 0) return
         viewModelScope.launch {
-            repository.actualizarPartido(partido.copy(puntosVisitante = partido.puntosVisitante - 1))
+            repository.actualizarPartido(p.copy(puntosVisitante = p.puntosVisitante - 1))
         }
     }
 
     fun rotarSiguiente() {
         val rotacion = _rotacionActual.value ?: return
-        val j = listOf(
-            rotacion.posicion1, rotacion.posicion2, rotacion.posicion3,
-            rotacion.posicion4, rotacion.posicion5, rotacion.posicion6
-        )
-        val s = listOf(
-            rotacion.sexo1, rotacion.sexo2, rotacion.sexo3,
-            rotacion.sexo4, rotacion.sexo5, rotacion.sexo6
-        )
-        val l = listOf(
-            rotacion.libero1, rotacion.libero2, rotacion.libero3,
-            rotacion.libero4, rotacion.libero5, rotacion.libero6
-        )
+        val j = listOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
+        val s = listOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
+        val l = listOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
+        
         val nueva = rotacion.copy(
-            posicion1 = j[1], posicion2 = j[2], posicion3 = j[3],
-            posicion4 = j[4], posicion5 = j[5], posicion6 = j[0],
-            sexo1 = s[1], sexo2 = s[2], sexo3 = s[3],
-            sexo4 = s[4], sexo5 = s[5], sexo6 = s[0],
-            libero1 = l[1], libero2 = l[2], libero3 = l[3],
-            libero4 = l[4], libero5 = l[5], libero6 = l[0]
+            posicion1 = j[1], posicion2 = j[2], posicion3 = j[3], posicion4 = j[4], posicion5 = j[5], posicion6 = j[0],
+            sexo1 = s[1], sexo2 = s[2], sexo3 = s[3], sexo4 = s[4], sexo5 = s[5], sexo6 = s[0],
+            libero1 = l[1], libero2 = l[2], libero3 = l[3], libero4 = l[4], libero5 = l[5], libero6 = l[0]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -164,25 +192,14 @@ class PartidoViewModel @Inject constructor(
 
     fun rotarAnterior() {
         val rotacion = _rotacionActual.value ?: return
-        val j = listOf(
-            rotacion.posicion1, rotacion.posicion2, rotacion.posicion3,
-            rotacion.posicion4, rotacion.posicion5, rotacion.posicion6
-        )
-        val s = listOf(
-            rotacion.sexo1, rotacion.sexo2, rotacion.sexo3,
-            rotacion.sexo4, rotacion.sexo5, rotacion.sexo6
-        )
-        val l = listOf(
-            rotacion.libero1, rotacion.libero2, rotacion.libero3,
-            rotacion.libero4, rotacion.libero5, rotacion.libero6
-        )
+        val j = listOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
+        val s = listOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
+        val l = listOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
+        
         val nueva = rotacion.copy(
-            posicion1 = j[5], posicion2 = j[0], posicion3 = j[1],
-            posicion4 = j[2], posicion5 = j[3], posicion6 = j[4],
-            sexo1 = s[5], sexo2 = s[0], sexo3 = s[1],
-            sexo4 = s[2], sexo5 = s[3], sexo6 = s[4],
-            libero1 = l[5], libero2 = l[0], libero3 = l[1],
-            libero4 = l[2], libero5 = l[3], libero6 = l[4]
+            posicion1 = j[5], posicion2 = j[0], posicion3 = j[1], posicion4 = j[2], posicion5 = j[3], posicion6 = j[4],
+            sexo1 = s[5], sexo2 = s[0], sexo3 = s[1], sexo4 = s[2], sexo5 = s[3], sexo6 = s[4],
+            libero1 = l[5], libero2 = l[0], libero3 = l[1], libero4 = l[2], libero5 = l[3], libero6 = l[4]
         )
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
@@ -190,11 +207,7 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
-    fun guardarNombresJugadores(
-        nombres: List<String>,
-        sexos: List<String>,
-        liberos: List<Boolean>
-    ) {
+    fun guardarNombresJugadores(nombres: List<String>, sexos: List<String>, liberos: List<Boolean>) {
         val rotacion = _rotacionActual.value ?: return
         val nueva = rotacion.copy(
             posicion1 = nombres.getOrElse(0) { rotacion.posicion1 },
@@ -219,23 +232,6 @@ class PartidoViewModel @Inject constructor(
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
             _rotacionActual.value = nueva
-        }
-    }
-
-    fun finalizarSet() {
-        val partido = partidoActivo.value ?: return
-        val (setsLocal, setsVisitante) = if (partido.puntosLocal > partido.puntosVisitante)
-            Pair(partido.setsLocal + 1, partido.setsVisitante)
-        else
-            Pair(partido.setsLocal, partido.setsVisitante + 1)
-        viewModelScope.launch {
-            repository.actualizarPartido(
-                partido.copy(
-                    setsLocal = setsLocal, setsVisitante = setsVisitante,
-                    puntosLocal = 0, puntosVisitante = 0,
-                    setActual = partido.setActual + 1
-                )
-            )
         }
     }
 }
