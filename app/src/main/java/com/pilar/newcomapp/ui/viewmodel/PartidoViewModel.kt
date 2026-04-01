@@ -29,6 +29,15 @@ class PartidoViewModel @Inject constructor(
     private val _advertenciaMixto = MutableStateFlow("")
     val advertenciaMixto: StateFlow<String> = _advertenciaMixto
 
+    // Almacen de liberos (nombre y datos guardados aparte de la rotacion)
+    private var liberoMNombre: String = ""
+    private var liberoFNombre: String = ""
+    // Posicion original del jugador que el libero reemplazo
+    private var liberoMReemplazo: Int = -1  // indice 0-5
+    private var liberoFReemplazo: Int = -1
+    private var titularReemplazadoM: String = ""
+    private var titularReemplazadoF: String = ""
+
     init {
         viewModelScope.launch {
             partidoActivo.filterNotNull().collect { partido ->
@@ -84,13 +93,17 @@ class PartidoViewModel @Inject constructor(
                 sexo4 = sexoDefault, sexo5 = sexoDefault, sexo6 = sexoDefault
             )
             repository.guardarRotacion(rotacion)
+            
+            // Reset liberos
+            liberoMNombre = ""
+            liberoFNombre = ""
+            liberoMReemplazo = -1
+            liberoFReemplazo = -1
+            titularReemplazadoM = ""
+            titularReemplazadoF = ""
         }
     }
 
-    /**
-     * Actualiza la configuracion del partido activo (modalidad, categoria, sets, puntaje).
-     * Llamada desde ConfigurarJugadoresScreen al guardar.
-     */
     fun actualizarConfiguracionPartido(
         modalidad: String,
         categoria: String,
@@ -100,9 +113,9 @@ class PartidoViewModel @Inject constructor(
         val p = partidoActivo.value ?: return
         viewModelScope.launch {
             val puntajeSetFinal = when {
-                puntajePorSet == 15 -> 10  // Newcom: sets 1-2 a 15, set 3 a 10
-                puntajePorSet == 25 -> 15  // Volleyball: sets 1-4 a 25, set 5 a 15
-                else -> puntajePorSet      // Fallback
+                puntajePorSet == 15 -> 10
+                puntajePorSet == 21 -> 15
+                else -> puntajePorSet
             }
             repository.actualizarPartido(
                 p.copy(
@@ -116,8 +129,91 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
+    fun actualizarNombresEquipos(nombreLocal: String, nombreVisitante: String) {
+        val p = partidoActivo.value ?: return
+        viewModelScope.launch {
+            repository.actualizarPartido(
+                p.copy(
+                    nombreEquipoLocal = nombreLocal,
+                    nombreEquipoVisitante = nombreVisitante
+                )
+            )
+        }
+    }
+
+    /**
+     * Ingresa el libero del sexo indicado en la primera posicion defensiva
+     * disponible (P6, P5, P1) de derecha a izquierda.
+     * Posiciones defensivas: indice 5 (P6), indice 4 (P5), indice 0 (P1).
+     * Si ya esta en cancha, lo saca y restaura al titular.
+     */
+    fun ingresarLibero(sexo: String) {
+        val rotacion = _rotacionActual.value ?: return
+        val nombres = mutableListOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
+        val sexos = mutableListOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
+        val liberos = mutableListOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
+
+        val reemplazoActual = if (sexo == "M") liberoMReemplazo else liberoFReemplazo
+
+        if (reemplazoActual >= 0) {
+            // Libero ya esta en cancha -> sacarlo y devolver titular
+            val titular = if (sexo == "M") titularReemplazadoM else titularReemplazadoF
+            nombres[reemplazoActual] = titular
+            liberos[reemplazoActual] = false
+            if (sexo == "M") {
+                liberoMReemplazo = -1
+                titularReemplazadoM = ""
+            } else {
+                liberoFReemplazo = -1
+                titularReemplazadoF = ""
+            }
+        } else {
+            // Buscar nombre del libero: usar el nombre guardado, o poner "Libero M"/"Libero F"
+            val nombreLibero = if (sexo == "M") {
+                liberoMNombre.ifBlank { "Libero M" }
+            } else {
+                liberoFNombre.ifBlank { "Libero F" }
+            }
+
+            // Posiciones defensivas de derecha a izquierda: P1(indice 0), P6(indice 5), P5(indice 4)
+            val posicionesDefensivas = listOf(0, 5, 4)
+            var ingresado = false
+
+            for (idx in posicionesDefensivas) {
+                // Solo reemplazar jugadores del mismo sexo que no sean libero
+                if (sexos[idx] == sexo && !liberos[idx]) {
+                    if (sexo == "M") {
+                        titularReemplazadoM = nombres[idx]
+                        liberoMReemplazo = idx
+                    } else {
+                        titularReemplazadoF = nombres[idx]
+                        liberoFReemplazo = idx
+                    }
+                    nombres[idx] = nombreLibero
+                    liberos[idx] = true
+                    ingresado = true
+                    break
+                }
+            }
+
+            if (!ingresado) return // No hay posicion defensiva disponible
+        }
+
+        val nueva = rotacion.copy(
+            posicion1 = nombres[0], posicion2 = nombres[1], posicion3 = nombres[2],
+            posicion4 = nombres[3], posicion5 = nombres[4], posicion6 = nombres[5],
+            libero1 = liberos[0], libero2 = liberos[1], libero3 = liberos[2],
+            libero4 = liberos[3], libero5 = liberos[4], libero6 = liberos[5]
+        )
+        viewModelScope.launch {
+            repository.actualizarRotacion(nueva)
+            _rotacionActual.value = nueva
+        }
+    }
+
     fun sumarPuntoLocal() {
         val p = partidoActivo.value ?: return
+        if (p.finalizado) return
         viewModelScope.launch {
             repository.actualizarPartido(p.copy(puntosLocal = p.puntosLocal + 1))
             verificarFinDeSet()
@@ -126,6 +222,7 @@ class PartidoViewModel @Inject constructor(
 
     fun sumarPuntoVisitante() {
         val p = partidoActivo.value ?: return
+        if (p.finalizado) return
         viewModelScope.launch {
             repository.actualizarPartido(p.copy(puntosVisitante = p.puntosVisitante + 1))
             verificarFinDeSet()
@@ -135,8 +232,13 @@ class PartidoViewModel @Inject constructor(
     private suspend fun verificarFinDeSet() {
         val p = repository.obtenerPartidoActivo().first() ?: return
         
-        val limite = if (p.setActual < p.cantidadSets) p.puntajePorSet else p.puntajeSetFinal
-        val topeMax = if (p.setActual < p.cantidadSets) 17 else 12
+        val esSetFinal = p.setActual >= p.cantidadSets
+        val limite = if (!esSetFinal) p.puntajePorSet else p.puntajeSetFinal
+        val topeMax = if (!esSetFinal) {
+            if (p.puntajePorSet == 15) 17 else p.puntajePorSet + 2
+        } else {
+            if (p.puntajeSetFinal == 10) 12 else p.puntajeSetFinal + 2
+        }
         
         val puntosL = p.puntosLocal
         val puntosV = p.puntosVisitante
@@ -161,7 +263,6 @@ class PartidoViewModel @Inject constructor(
         val sL = if (localGanaSet) p.setsLocal + 1 else p.setsLocal
         val sV = if (!localGanaSet) p.setsVisitante + 1 else p.setsVisitante
         
-        // Guardar resultado del set en el historial
         var nP = when (p.setActual) {
             1 -> p.copy(set1Local = p.puntosLocal, set1Visitante = p.puntosVisitante)
             2 -> p.copy(set2Local = p.puntosLocal, set2Visitante = p.puntosVisitante)
@@ -177,8 +278,9 @@ class PartidoViewModel @Inject constructor(
             setActual = p.setActual + 1
         )
 
-        // Verificar si termino el partido
-        val setsNecesarios = if (p.cantidadSets == 3) 2 else 3
+        // Para 1 set: gana el primero en llegar a 1 set
+        // Para 3 sets: gana el primero en llegar a 2 sets
+        val setsNecesarios = if (p.cantidadSets == 1) 1 else 2
         if (sL >= setsNecesarios || sV >= setsNecesarios) {
             nP = nP.copy(finalizado = true)
         }
@@ -204,10 +306,13 @@ class PartidoViewModel @Inject constructor(
 
     fun rotarSiguiente() {
         val rotacion = _rotacionActual.value ?: return
-        val j = listOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
-        val s = listOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
-        val l = listOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
+        val j = mutableListOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
+        val s = mutableListOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
+        val l = mutableListOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
         
+        // Antes de rotar, si hay libero en posicion defensiva que pasa a ataque, sacar
+        sacarLiberoSiPasaAAtaque(j, s, l)
+
         val nueva = rotacion.copy(
             posicion1 = j[1], posicion2 = j[2], posicion3 = j[3], posicion4 = j[4], posicion5 = j[5], posicion6 = j[0],
             sexo1 = s[1], sexo2 = s[2], sexo3 = s[3], sexo4 = s[4], sexo5 = s[5], sexo6 = s[0],
@@ -221,10 +326,12 @@ class PartidoViewModel @Inject constructor(
 
     fun rotarAnterior() {
         val rotacion = _rotacionActual.value ?: return
-        val j = listOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
-        val s = listOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
-        val l = listOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
+        val j = mutableListOf(rotacion.posicion1, rotacion.posicion2, rotacion.posicion3, rotacion.posicion4, rotacion.posicion5, rotacion.posicion6)
+        val s = mutableListOf(rotacion.sexo1, rotacion.sexo2, rotacion.sexo3, rotacion.sexo4, rotacion.sexo5, rotacion.sexo6)
+        val l = mutableListOf(rotacion.libero1, rotacion.libero2, rotacion.libero3, rotacion.libero4, rotacion.libero5, rotacion.libero6)
         
+        sacarLiberoSiPasaAAtaque(j, s, l)
+
         val nueva = rotacion.copy(
             posicion1 = j[5], posicion2 = j[0], posicion3 = j[1], posicion4 = j[2], posicion5 = j[3], posicion6 = j[4],
             sexo1 = s[5], sexo2 = s[0], sexo3 = s[1], sexo4 = s[2], sexo5 = s[3], sexo6 = s[4],
@@ -233,6 +340,45 @@ class PartidoViewModel @Inject constructor(
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
             _rotacionActual.value = nueva
+        }
+    }
+
+    /**
+     * Antes de rotar, verifica si un libero esta en una posicion defensiva
+     * que al rotar pasaria a posicion de ataque. Si es asi, lo saca y
+     * restaura al titular original.
+     *
+     * Posiciones de ataque (despues de rotar +1): las que estan en indices 1,2,3
+     * Para rotar +1: indice 0 (P1) pasa al final, todos suben uno.
+     *   - El que estaba en indice 4 (P5) pasa a indice 3 (P4=ataque)
+     * Para la logica simple: si un libero esta en posicion que va a ataque, restaurar.
+     */
+    private fun sacarLiberoSiPasaAAtaque(
+        nombres: MutableList<String>,
+        sexos: MutableList<String>,
+        liberos: MutableList<Boolean>
+    ) {
+        // Al rotar +1, la posicion en indice 4 (P5) pasa a indice 3 (P4=ataque)
+        // Al rotar -1, la posicion en indice 1 (P2) pasa a indice 0 (pero P2 ya es ataque)
+        // Posiciones defensivas: indices 0(P1), 4(P5), 5(P6)
+        // Posiciones de ataque: indices 1(P2), 2(P3), 3(P4)
+        
+        for (idx in listOf(0, 4, 5)) {
+            if (liberos[idx]) {
+                val sexoLib = sexos[idx]
+                val titular = if (sexoLib == "M") titularReemplazadoM else titularReemplazadoF
+                if (titular.isNotBlank()) {
+                    nombres[idx] = titular
+                    liberos[idx] = false
+                    if (sexoLib == "M") {
+                        liberoMReemplazo = -1
+                        titularReemplazadoM = ""
+                    } else {
+                        liberoFReemplazo = -1
+                        titularReemplazadoF = ""
+                    }
+                }
+            }
         }
     }
 

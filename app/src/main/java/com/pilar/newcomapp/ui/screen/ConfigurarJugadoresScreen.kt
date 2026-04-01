@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +29,7 @@ fun ConfigurarJugadoresScreen(
     var modalidad by remember(partido) { mutableStateOf(partido?.modalidad ?: "Masculino") }
     var categoria by remember(partido) { mutableStateOf(partido?.categoria ?: "+40") }
     var cantidadSets by remember(partido) { mutableStateOf(partido?.cantidadSets ?: 3) }
-    var puntajePorSet by remember(partido) { mutableStateOf(partido?.puntajePorSet ?: 25) }
+    var puntajePorSet by remember(partido) { mutableStateOf(partido?.puntajePorSet ?: 15) }
 
     // Jugadores
     val nombres = remember(rotacion) {
@@ -52,21 +52,20 @@ fun ConfigurarJugadoresScreen(
             rotacion?.sexo6 ?: "M"
         )
     }
-    val liberos = remember(rotacion) {
-        mutableStateListOf(
-            rotacion?.libero1 ?: false,
-            rotacion?.libero2 ?: false,
-            rotacion?.libero3 ?: false,
-            rotacion?.libero4 ?: false,
-            rotacion?.libero5 ?: false,
-            rotacion?.libero6 ?: false
-        )
-    }
 
     val modalidades = listOf("Masculino", "Femenino", "Mixto")
     val categorias = listOf("Open", "+40", "+45", "+50", "+55", "+60", "+65", "+68")
-    val opcionesSets = listOf(3, 5)
-    val opcionesPuntaje = listOf(15, 21, 25)
+    val opcionesSets = listOf(1, 3)
+    val opcionesPuntaje = listOf(15, 21)
+
+    val etiquetasPosicion = listOf(
+        "P1 - Servidor",
+        "P2 - Atacante Derecha",
+        "P3 - Atacante Centro",
+        "P4 - Atacante Izquierda",
+        "P5 - Zaguero Izquierda",
+        "P6 - Zaguero Central"
+    )
 
     Scaffold(
         topBar = {
@@ -74,7 +73,7 @@ fun ConfigurarJugadoresScreen(
                 title = { Text("Configurar Partido y Jugadores") },
                 navigationIcon = {
                     IconButton(onClick = onAtras) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atras")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atras")
                     }
                 }
             )
@@ -146,7 +145,7 @@ fun ConfigurarJugadoresScreen(
                     FilterChip(
                         selected = cantidadSets == s,
                         onClick = { cantidadSets = s },
-                        label = { Text("$s sets") }
+                        label = { Text(if (s == 1) "1 set" else "$s sets") }
                     )
                 }
             }
@@ -175,30 +174,19 @@ fun ConfigurarJugadoresScreen(
                 color = MaterialTheme.colorScheme.primary)
 
             Text(
-                "Azul = Masculino | Rojo = Femenino | Verde = Libero",
+                "Azul = Masculino | Rojo = Femenino",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            val etiquetasPosicion = listOf(
-                "P1 - Servidor (atras derecha)",
-                "P2 - Delantero derecha",
-                "P3 - Delantero centro",
-                "P4 - Delantero izquierda",
-                "P5 - Atras izquierda",
-                "P6 - Atras centro"
-            )
-
             (0..5).forEach { i ->
                 val colorBorde = when {
-                    liberos[i] -> Color(0xFF2E7D32)
                     sexos[i] == "F" -> Color(0xFFC62828)
                     else -> Color(0xFF1565C0)
                 }
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = when {
-                            liberos[i] -> Color(0xFFE8F5E9)
                             sexos[i] == "F" -> Color(0xFFFFEBEE)
                             else -> Color(0xFFE3F2FD)
                         }
@@ -223,7 +211,7 @@ fun ConfigurarJugadoresScreen(
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
-                        // Sexo
+                        // Sexo (solo en Mixto)
                         if (modalidad == "Mixto") {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -242,29 +230,6 @@ fun ConfigurarJugadoresScreen(
                                 )
                             }
                         }
-                        // Libero
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = liberos[i],
-                                onCheckedChange = { checked ->
-                                    // Solo un libero por sexo
-                                    if (checked) {
-                                        val mismoSexo = sexos[i]
-                                        (0..5).forEach { j ->
-                                            if (j != i && sexos[j] == mismoSexo) liberos[j] = false
-                                        }
-                                    }
-                                    liberos[i] = checked
-                                }
-                            )
-                            Text(
-                                text = if (sexos[i] == "F") "Es Libero Femenino" else "Es Libero",
-                                fontSize = 13.sp,
-                                color = if (liberos[i]) Color(0xFF2E7D32) else Color.Gray
-                            )
-                        }
                     }
                 }
             }
@@ -276,10 +241,12 @@ fun ConfigurarJugadoresScreen(
                     viewModel.actualizarConfiguracionPartido(
                         modalidad, categoria, cantidadSets, puntajePorSet
                     )
+                    // No pasar liberos - ahora se manejan desde los botones de libero
+                    val liberosVacios = List(6) { false }
                     viewModel.guardarNombresJugadores(
                         nombres.toList(),
                         sexos.toList(),
-                        liberos.toList()
+                        liberosVacios
                     )
                     onAtras()
                 },

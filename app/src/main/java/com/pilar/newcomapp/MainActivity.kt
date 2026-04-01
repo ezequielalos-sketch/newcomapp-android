@@ -12,6 +12,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.pilar.newcomapp.ui.screen.ConfigurarJugadoresScreen
+import com.pilar.newcomapp.ui.screen.HistorialScreen
 import com.pilar.newcomapp.ui.screen.InicioScreen
 import com.pilar.newcomapp.ui.screen.PartidoScreen
 import com.pilar.newcomapp.ui.screen.RotacionScreen
@@ -48,6 +49,9 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("partido") {
                                         popUpTo("inicio") { inclusive = false }
                                     }
+                                },
+                                onVerRotacion = {
+                                    navController.navigate("rotacion")
                                 }
                             )
                         }
@@ -65,6 +69,11 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("configurar") {
                             ConfigurarJugadoresScreen(
+                                onAtras = { navController.navigateUp() }
+                            )
+                        }
+                        composable("historial") {
+                            HistorialScreen(
                                 onAtras = { navController.navigateUp() }
                             )
                         }

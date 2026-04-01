@@ -9,7 +9,7 @@ import com.pilar.newcomapp.data.local.entity.RotacionActualEntity
 
 @Database(
     entities = [PartidoEntity::class, RotacionActualEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class NewcomDatabase : RoomDatabase() {
