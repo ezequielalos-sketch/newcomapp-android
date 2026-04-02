@@ -28,5 +28,8 @@ data class RotacionActualEntity(
     val libero3: Boolean = false,
     val libero4: Boolean = false,
     val libero5: Boolean = false,
-    val libero6: Boolean = false
+    val libero6: Boolean = false,
+    // Nombres de liberos (persistidos en Room)
+    val liberoMNombre: String = "",
+    val liberoFNombre: String = ""
 )

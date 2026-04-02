@@ -53,18 +53,15 @@ fun ConfigurarJugadoresScreen(
         )
     }
 
-    // Liberos (2 posibles)
-    var liberoMNombre by remember { mutableStateOf("") }
-    var liberoMSexo by remember { mutableStateOf("M") }
-    var liberoFNombre by remember { mutableStateOf("") }
-    var liberoFSexo by remember { mutableStateOf("F") }
-
-    // Inicializar nombres de liberos desde ViewModel
-    LaunchedEffect(Unit) {
-        val nombresLiberos = viewModel.obtenerNombresLiberos()
-        liberoMNombre = nombresLiberos.first
-        liberoFNombre = nombresLiberos.second
+    // Liberos (2 posibles) - leer desde Room via la rotacion
+    var liberoMNombre by remember(rotacion) {
+        mutableStateOf(rotacion?.liberoMNombre ?: "")
     }
+    var liberoMSexo by remember { mutableStateOf("M") }
+    var liberoFNombre by remember(rotacion) {
+        mutableStateOf(rotacion?.liberoFNombre ?: "")
+    }
+    var liberoFSexo by remember { mutableStateOf("F") }
 
     val modalidades = listOf("Masculino", "Femenino", "Mixto")
     val categorias = listOf("+40", "+50", "+60", "+68")

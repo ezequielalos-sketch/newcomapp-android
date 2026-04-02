@@ -318,7 +318,8 @@ fun JugadorCard(
         else -> "M"
     }
     val colorEtiqueta = when {
-        esLibero -> ColorLiberoTexto   // Verde para la etiqueta
+        esLibero && sexo == "F" -> ColorLiberoF  // Rojo para etiqueta LIB F
+        esLibero -> ColorLiberoM                  // Azul para etiqueta LIB M
         sexo == "F" -> ColorFemenino
         else -> ColorMasculino
     }
@@ -347,23 +348,23 @@ fun JugadorCard(
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
-            // Numero de posicion
+            // Numero de posicion - reducido
             Text(
                 text = "$posicion",
-                fontSize = 22.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = colorNumero
             )
-            // Nombre del jugador - MAS GRANDE
+            // Nombre del jugador - GRANDE 18sp
             Text(
                 text = if (nombre.isBlank()) "---" else nombre,
-                fontSize = 15.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                lineHeight = 16.sp
+                lineHeight = 20.sp
             )
             Spacer(modifier = Modifier.height(2.dp))
             // Etiqueta de sexo/libero

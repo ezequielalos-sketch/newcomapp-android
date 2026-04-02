@@ -41,10 +41,8 @@ class PartidoViewModel @Inject constructor(
     private val _finDeSetTransicion = MutableStateFlow<FinDeSetInfo?>(null)
     val finDeSetTransicion: StateFlow<FinDeSetInfo?> = _finDeSetTransicion
 
-    // Almacen de liberos (nombre y datos persistentes)
-    private var liberoMNombre: String = ""
-    private var liberoFNombre: String = ""
     // Tracking: quien reemplazo cada libero (nombre del titular original)
+    // Los nombres de liberos se persisten en Room (RotacionActualEntity.liberoMNombre/liberoFNombre)
     private var liberoMReemplazo: Int = -1  // indice actual en cancha, -1 si no esta
     private var liberoFReemplazo: Int = -1
     private var titularReemplazadoM: String = ""
@@ -106,9 +104,7 @@ class PartidoViewModel @Inject constructor(
             )
             repository.guardarRotacion(rotacion)
             
-            // Reset liberos
-            liberoMNombre = ""
-            liberoFNombre = ""
+            // Reset tracking de liberos
             liberoMReemplazo = -1
             liberoFReemplazo = -1
             titularReemplazadoM = ""
@@ -154,12 +150,20 @@ class PartidoViewModel @Inject constructor(
     }
 
     fun guardarNombresLiberos(nombreM: String, nombreF: String) {
-        liberoMNombre = nombreM
-        liberoFNombre = nombreF
+        val rotacion = _rotacionActual.value ?: return
+        val nueva = rotacion.copy(
+            liberoMNombre = nombreM,
+            liberoFNombre = nombreF
+        )
+        viewModelScope.launch {
+            repository.actualizarRotacion(nueva)
+            _rotacionActual.value = nueva
+        }
     }
 
     fun obtenerNombresLiberos(): Pair<String, String> {
-        return Pair(liberoMNombre, liberoFNombre)
+        val rotacion = _rotacionActual.value
+        return Pair(rotacion?.liberoMNombre ?: "", rotacion?.liberoFNombre ?: "")
     }
 
     fun descartarTransicionSet() {
@@ -192,10 +196,11 @@ class PartidoViewModel @Inject constructor(
                 titularReemplazadoF = ""
             }
         } else {
+            // Leer nombres de liberos desde Room (persistidos)
             val nombreLibero = if (sexo == "M") {
-                liberoMNombre.ifBlank { "Libero M" }
+                rotacion.liberoMNombre.ifBlank { "Libero M" }
             } else {
-                liberoFNombre.ifBlank { "Libero F" }
+                rotacion.liberoFNombre.ifBlank { "Libero F" }
             }
 
             // Posiciones defensivas: P1(indice 0), P6(indice 5), P5(indice 4)
@@ -434,12 +439,13 @@ class PartidoViewModel @Inject constructor(
         liberos: MutableList<Boolean>
     ) {
         val posicionesDefensivas = setOf(0, 4, 5) // P1, P5, P6
+        val rotacion = _rotacionActual.value
 
         // Re-ingresar libero M si tenia un titular asignado
         if (titularReemplazadoM.isNotBlank()) {
             val idx = nombres.indexOf(titularReemplazadoM)
             if (idx >= 0 && idx in posicionesDefensivas) {
-                val nombreLibero = liberoMNombre.ifBlank { "Libero M" }
+                val nombreLibero = (rotacion?.liberoMNombre ?: "").ifBlank { "Libero M" }
                 nombres[idx] = nombreLibero
                 liberos[idx] = true
                 liberoMReemplazo = idx
@@ -452,7 +458,7 @@ class PartidoViewModel @Inject constructor(
         if (titularReemplazadoF.isNotBlank()) {
             val idx = nombres.indexOf(titularReemplazadoF)
             if (idx >= 0 && idx in posicionesDefensivas) {
-                val nombreLibero = liberoFNombre.ifBlank { "Libero F" }
+                val nombreLibero = (rotacion?.liberoFNombre ?: "").ifBlank { "Libero F" }
                 nombres[idx] = nombreLibero
                 liberos[idx] = true
                 liberoFReemplazo = idx
