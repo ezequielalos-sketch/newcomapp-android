@@ -149,6 +149,10 @@ class PartidoViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Guarda nombres de liberos. Si se llama junto con guardarNombresJugadores,
+     * usar guardarTodoConfig() en su lugar para evitar race conditions.
+     */
     fun guardarNombresLiberos(nombreM: String, nombreF: String) {
         val rotacion = _rotacionActual.value ?: return
         val nueva = rotacion.copy(
@@ -164,6 +168,71 @@ class PartidoViewModel @Inject constructor(
     fun obtenerNombresLiberos(): Pair<String, String> {
         val rotacion = _rotacionActual.value
         return Pair(rotacion?.liberoMNombre ?: "", rotacion?.liberoFNombre ?: "")
+    }
+
+    /**
+     * Guarda TODO en una sola operacion atomica:
+     * configuracion de partido + nombres jugadores + nombres liberos.
+     * Evita race conditions entre multiples guardados.
+     */
+    fun guardarTodoConfig(
+        modalidad: String,
+        categoria: String,
+        cantidadSets: Int,
+        puntajePorSet: Int,
+        nombres: List<String>,
+        sexos: List<String>,
+        liberoMNombre: String,
+        liberoFNombre: String
+    ) {
+        val p = partidoActivo.value ?: return
+        val rotacion = _rotacionActual.value ?: return
+
+        viewModelScope.launch {
+            // 1. Actualizar partido
+            val puntajeSetFinal = when {
+                puntajePorSet == 15 -> 10
+                puntajePorSet == 21 -> 15
+                else -> puntajePorSet
+            }
+            repository.actualizarPartido(
+                p.copy(
+                    modalidad = modalidad,
+                    categoria = categoria,
+                    cantidadSets = cantidadSets,
+                    puntajePorSet = puntajePorSet,
+                    puntajeSetFinal = puntajeSetFinal
+                )
+            )
+
+            // 2. Actualizar rotacion: jugadores + liberos en una sola escritura
+            val nueva = rotacion.copy(
+                posicion1 = nombres.getOrElse(0) { rotacion.posicion1 },
+                posicion2 = nombres.getOrElse(1) { rotacion.posicion2 },
+                posicion3 = nombres.getOrElse(2) { rotacion.posicion3 },
+                posicion4 = nombres.getOrElse(3) { rotacion.posicion4 },
+                posicion5 = nombres.getOrElse(4) { rotacion.posicion5 },
+                posicion6 = nombres.getOrElse(5) { rotacion.posicion6 },
+                sexo1 = sexos.getOrElse(0) { rotacion.sexo1 },
+                sexo2 = sexos.getOrElse(1) { rotacion.sexo2 },
+                sexo3 = sexos.getOrElse(2) { rotacion.sexo3 },
+                sexo4 = sexos.getOrElse(3) { rotacion.sexo4 },
+                sexo5 = sexos.getOrElse(4) { rotacion.sexo5 },
+                sexo6 = sexos.getOrElse(5) { rotacion.sexo6 },
+                libero1 = false, libero2 = false, libero3 = false,
+                libero4 = false, libero5 = false, libero6 = false,
+                liberoMNombre = liberoMNombre,
+                liberoFNombre = liberoFNombre
+            )
+            repository.actualizarRotacion(nueva)
+            _rotacionActual.value = nueva
+
+            // Reset tracking de liberos (nombres cambiaron, liberos salen)
+            liberoMReemplazo = -1
+            liberoFReemplazo = -1
+            titularReemplazadoM = ""
+            titularReemplazadoF = ""
+        }
     }
 
     fun descartarTransicionSet() {
@@ -232,9 +301,10 @@ class PartidoViewModel @Inject constructor(
             libero1 = liberos[0], libero2 = liberos[1], libero3 = liberos[2],
             libero4 = liberos[3], libero5 = liberos[4], libero6 = liberos[5]
         )
+        // Actualizar UI inmediatamente, luego persistir
+        _rotacionActual.value = nueva
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
-            _rotacionActual.value = nueva
         }
     }
 
@@ -369,9 +439,10 @@ class PartidoViewModel @Inject constructor(
             libero1 = lR[0], libero2 = lR[1], libero3 = lR[2],
             libero4 = lR[3], libero5 = lR[4], libero6 = lR[5]
         )
+        // Actualizar UI inmediatamente, luego persistir
+        _rotacionActual.value = nueva
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
-            _rotacionActual.value = nueva
         }
     }
 
@@ -400,9 +471,10 @@ class PartidoViewModel @Inject constructor(
             libero1 = lR[0], libero2 = lR[1], libero3 = lR[2],
             libero4 = lR[3], libero5 = lR[4], libero6 = lR[5]
         )
+        // Actualizar UI inmediatamente, luego persistir
+        _rotacionActual.value = nueva
         viewModelScope.launch {
             repository.actualizarRotacion(nueva)
-            _rotacionActual.value = nueva
         }
     }
 

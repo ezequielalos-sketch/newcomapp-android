@@ -308,18 +308,17 @@ fun ConfigurarJugadoresScreen(
 
             Button(
                 onClick = {
-                    viewModel.actualizarConfiguracionPartido(
-                        modalidad, categoria, cantidadSets, puntajePorSet
+                    // Guardar TODO en una sola operacion atomica
+                    viewModel.guardarTodoConfig(
+                        modalidad = modalidad,
+                        categoria = categoria,
+                        cantidadSets = cantidadSets,
+                        puntajePorSet = puntajePorSet,
+                        nombres = nombres.toList(),
+                        sexos = sexos.toList(),
+                        liberoMNombre = liberoMNombre,
+                        liberoFNombre = liberoFNombre
                     )
-                    // Guardar jugadores titulares
-                    val liberosVacios = List(6) { false }
-                    viewModel.guardarNombresJugadores(
-                        nombres.toList(),
-                        sexos.toList(),
-                        liberosVacios
-                    )
-                    // Guardar nombres de liberos
-                    viewModel.guardarNombresLiberos(liberoMNombre, liberoFNombre)
                     onAtras()
                 },
                 modifier = Modifier.fillMaxWidth()
